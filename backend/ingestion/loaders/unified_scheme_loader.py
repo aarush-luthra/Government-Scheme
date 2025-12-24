@@ -1,58 +1,51 @@
+import json
+import os
 from typing import List, Dict
+
+
+RAW_DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "data",
+    "raw"
+)
 
 
 class UnifiedSchemeLoader:
     """
-    Authoritative, curated loader for Government Schemes
-    (No scraping, no MyScheme dependency)
+    Loads government schemes from curated JSON files
+    (skips empty or invalid files safely)
     """
 
     def load_all_schemes(self, limit: int | None = None) -> List[Dict]:
-        schemes = self._central_schemes() + self._education_schemes()
-        unique = {s["title"].lower(): s for s in schemes}
+        schemes: List[Dict] = []
+
+        for filename in os.listdir(RAW_DATA_DIR):
+            if not filename.endswith(".json"):
+                continue
+
+            file_path = os.path.join(RAW_DATA_DIR, filename)
+
+            # Skip empty files
+            if os.path.getsize(file_path) == 0:
+                print(f"⚠️ Skipping empty file: {filename}")
+                continue
+
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                    if not isinstance(data, list):
+                        print(f"⚠️ Skipping invalid format (not a list): {filename}")
+                        continue
+
+                    schemes.extend(data)
+
+            except json.JSONDecodeError:
+                print(f"⚠️ Skipping invalid JSON file: {filename}")
+                continue
+
+        # Remove duplicates by title
+        unique = {s["title"].lower(): s for s in schemes if "title" in s}
         schemes = list(unique.values())
+
         return schemes[:limit] if limit else schemes
-
-    def _central_schemes(self) -> List[Dict]:
-        return [
-            {
-                "title": "PM-KISAN",
-                "description": "Income support of ₹6000 per year to farmer families.",
-                "benefits": "₹6000 per year in three installments.",
-                "eligibility": "Landholding farmer families.",
-                "documents_required": "Aadhaar, land records, bank details.",
-                "application_process": "Apply via PM-KISAN portal or CSC.",
-                "department": "Ministry of Agriculture",
-                "category": "Agriculture",
-                "url": "https://pmkisan.gov.in",
-                "source": "Central Government",
-            },
-            {
-                "title": "Ayushman Bharat – PM-JAY",
-                "description": "Health insurance coverage up to ₹5 lakh.",
-                "benefits": "Cashless treatment in empanelled hospitals.",
-                "eligibility": "SECC-listed families.",
-                "documents_required": "Aadhaar, ration card.",
-                "application_process": "Generate Ayushman card online.",
-                "department": "Ministry of Health",
-                "category": "Health",
-                "url": "https://pmjay.gov.in",
-                "source": "Central Government",
-            },
-        ]
-
-    def _education_schemes(self) -> List[Dict]:
-        return [
-            {
-                "title": "PM Scholarship Scheme",
-                "description": "Scholarships for children of armed forces personnel.",
-                "benefits": "₹2,500–₹3,000 per month.",
-                "eligibility": "Children of ex-servicemen.",
-                "documents_required": "Education certificates, service proof.",
-                "application_process": "Apply via National Scholarship Portal.",
-                "department": "Ministry of Defence",
-                "category": "Education",
-                "url": "https://scholarships.gov.in",
-                "source": "Central Government",
-            }
-        ]

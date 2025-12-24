@@ -1,0 +1,26 @@
+[
+    {
+        "title": "PM-KISAN",
+        "description": "Income support scheme providing ₹6000 per year to farmer families.",
+        "benefits": "₹6000 per year in three installments.",
+        "eligibility": "Landholding farmer families.",
+        "documents_required": "Aadhaar card, land records, bank details.",
+        "application_process": "Apply through PM-KISAN portal or CSC.",
+        "department": "Ministry of Agriculture",
+        "category": "Agriculture",
+        "url": "https://pmkisan.gov.in",
+        "source": "Central Government"
+    },
+    {
+        "title": "PM Fasal Bima Yojana",
+        "description": "Crop insurance scheme for farmers against natural calamities.",
+        "benefits": "Low premium crop insurance.",
+        "eligibility": "All farmers including tenant farmers.",
+        "documents_required": "Land records, Aadhaar, bank details.",
+        "application_process": "Apply via banks or CSC.",
+        "department": "Ministry of Agriculture",
+        "category": "Agriculture",
+        "url": "https://pmfby.gov.in",
+        "source": "Central Government"
+    }
+]
