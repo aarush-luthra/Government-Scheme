@@ -1,15 +1,45 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+from pydantic_settings import BaseSettings
+from pathlib import Path
 import os
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-DATA_DIR = os.path.join(BASE_DIR, "data")
-RAW_DATA_DIR = os.path.join(DATA_DIR, "raw")
-PROCESSED_DATA_DIR = os.path.join(DATA_DIR, "processed")
-VECTOR_DB_DIR = os.path.join(DATA_DIR, "chroma_db")
+BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(BASE_DIR / ".env")
 
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
 
-EMBEDDING_MODEL = "text-embedding-3-small"
+class Settings(BaseSettings):
+    # OpenAI
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    # Embeddings
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+
+    # Chunking
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
+
+    # Vector DB
+    CHROMA_COLLECTION_NAME: str = "government_schemes"
+    CHROMA_PERSIST_DIRECTORY: str = str(
+        BASE_DIR / "backend" / "data" / "chroma_db"
+    )
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+# ✅ singleton
+settings = Settings()
+
+# ✅ backward-compatible constants
+CHUNK_SIZE = settings.CHUNK_SIZE
+CHUNK_OVERLAP = settings.CHUNK_OVERLAP
+
+# Backward compatibility for older imports
+VECTOR_DB_DIR = settings.CHROMA_PERSIST_DIRECTORY
+# Raw data directory (JSON / scraped data)
+RAW_DATA_DIR = str(BASE_DIR / "backend" / "data")
