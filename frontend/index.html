@@ -3,31 +3,62 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Government Scheme Assistant</title>
 
-    <!-- Your CSS -->
-    <link rel="stylesheet" href="style.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- MARKED (Markdown Parser) – MUST be BEFORE script.js -->
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/style.css" />
+
+    <!-- Markdown Parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
 
     <div class="chat-container">
-        <h2>Government Scheme Assistant</h2>
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-text">
+                🏛️ Government Scheme Assistant
+            </div>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                Online
+            </div>
+        </div>
 
-        <div id="chat-box"></div>
+        <!-- Chat Area -->
+        <div id="chat-box">
+            <!-- Welcome Message Placeholder -->
+            <div class="welcome-message">
+                <div class="welcome-title">Welcome to Government Scheme Assistant</div>
+                <p>I can help you understand eligibility, benefits, and application processes for Indian government
+                    schemes in your preferred language.</p>
+            </div>
+        </div>
 
+        <!-- Input Area -->
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="Ask about government schemes..."
-                onkeydown="if(event.key==='Enter') sendMessage()" />
-            <button onclick="sendMessage()">Send</button>
+            <div class="input-wrapper">
+                <input type="text" id="user-input" placeholder="Type your message..."
+                    onkeydown="if(event.key==='Enter') sendMessage()" autocomplete="off" />
+                <button onclick="sendMessage()" aria-label="Send">
+                    <svg viewBox="0 0 24 24">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Your JS (AFTER marked) -->
-    <script src="script.js"></script>
+    <!-- JS -->
+    <script src="/static/script.js"></script>
 
 </body>
 

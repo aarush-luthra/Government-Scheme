@@ -11,22 +11,35 @@ If information is missing, say it is not available.
 Use simple language.
 """
 
-def generate_answer(user_question: str, context: str) -> str:
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": f"""
+from typing import List, Dict, Optional
+
+def generate_answer(user_question: str, context: str, history: Optional[List[Dict[str, str]]] = None) -> str:
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    
+    # Add history if available
+    if history:
+        # Validate and add last 5 messages to keep context window manageable
+        for msg in history[-5:]:
+            role = msg.get("role")
+            content = msg.get("content")
+            if role in ["user", "assistant"] and content:
+                messages.append({"role": role, "content": content})
+    
+    # Add current context and question
+    messages.append({
+        "role": "user",
+        "content": f"""
 Scheme Information:
 {context}
 
 User Question:
 {user_question}
 """
-            },
-        ],
+    })
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
         temperature=0.2,
     )
 

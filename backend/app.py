@@ -1,44 +1,340 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict
+from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
 from dotenv import load_dotenv
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
-app = FastAPI(title="Government Scheme Assistant")
+app = FastAPI(
+    title="Government Scheme Assistant",
+    description="Multi-language AI assistant for Indian government schemes",
+    version="2.0.0"
+)
 
-# ✅ CORRECT CORS CONFIG
+# Initialize translator (single instance for efficiency)
+translator = IndicBartTranslator()
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],           # allow frontend
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],           # allow OPTIONS, POST, etc
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Initialize retriever
 retriever = VectorStoreRetriever()
 
+# Determine frontend path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
+# Mount frontend static files
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+
+
+# Request/Response Models
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, description="User's question or message")
+    source_lang: Optional[str] = Field(None, description="Source language code (auto-detect if null)")
+    target_lang: Optional[str] = Field(None, description="Preferred response language. If null, defaults to source language.")
+    history: Optional[List[Dict[str, str]]] = Field(default=[], description="Chat history (list of role/content dicts)")
 
 
-@app.post("/chat")
-async def chat(req: ChatRequest):
-    docs = retriever.search(req.message, k=4)
+class ChatResponse(BaseModel):
+    reply: str
+    detected_language: Optional[str] = None
+    language_name: Optional[str] = None
+    original_message: Optional[str] = None
+    translated_message: Optional[str] = None
 
-    if not docs:
+
+class TranslateRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    source_lang: Optional[str] = None
+    target_lang: str = Field("en_XX", description="Target language code")
+
+
+class TranslateResponse(BaseModel):
+    translation: str
+    source_lang: str
+    target_lang: str
+
+
+class BatchTranslateRequest(BaseModel):
+    texts: List[str]
+    source_lang: Optional[str] = None
+    target_lang: str = "en_XX"
+
+
+class LanguageInfo(BaseModel):
+    code: str
+    name: str
+
+
+# API Endpoints
+
+@app.get("/")
+async def serve_frontend():
+    """Serve the frontend index.html"""
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "Government Scheme Assistant",
+        "supported_languages": len(translator.get_supported_languages())
+    }
+
+
+@app.get("/languages", response_model=List[LanguageInfo])
+async def get_supported_languages():
+    """Get list of all supported languages"""
+    languages = translator.get_supported_languages()
+    return [
+        LanguageInfo(code=code, name=name) 
+        for code, name in languages.items()
+    ]
+
+
+@app.post("/translate", response_model=TranslateResponse)
+async def translate_text(req: TranslateRequest):
+    """
+    Translate text between any supported languages
+    
+    - **text**: Text to translate
+    - **source_lang**: Source language code (optional, will auto-detect)
+    - **target_lang**: Target language code (default: English)
+    """
+    try:
+        # Auto-detect if source_lang not provided
+        if req.source_lang is None:
+            detected_lang = translator.detect_language_code(req.text)
+            if detected_lang is None:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Could not detect source language. Please specify source_lang."
+                )
+            source_lang = detected_lang
+        else:
+            source_lang = req.source_lang
+        
+        # Validate language codes
+        supported = translator.get_supported_languages()
+        if source_lang not in supported:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported source language: {source_lang}"
+            )
+        if req.target_lang not in supported:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported target language: {req.target_lang}"
+            )
+        
+        # Perform translation
+        translation = translator.translate(
+            req.text,
+            source_lang=source_lang,
+            target_lang=req.target_lang
+        )
+        
+        return TranslateResponse(
+            translation=translation,
+            source_lang=source_lang,
+            target_lang=req.target_lang
+        )
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Translation error: {e}")
+        raise HTTPException(status_code=500, detail="Translation failed")
+
+
+@app.post("/translate/batch")
+async def batch_translate(req: BatchTranslateRequest):
+    """
+    Translate multiple texts at once
+    
+    - **texts**: List of texts to translate
+    - **source_lang**: Source language code (optional)
+    - **target_lang**: Target language code
+    """
+    try:
+        translations = translator.batch_translate(
+            req.texts,
+            source_lang=req.source_lang,
+            target_lang=req.target_lang
+        )
+        
         return {
-            "reply": "I do not have information about this. Please specify the scheme name."
+            "translations": translations,
+            "count": len(translations),
+            "source_lang": req.source_lang,
+            "target_lang": req.target_lang
+        }
+        
+    except Exception as e:
+        logger.error(f"Batch translation error: {e}")
+        raise HTTPException(status_code=500, detail="Batch translation failed")
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest):
+    """
+    Chat with the assistant about government schemes
+    Supports all Indic languages with automatic translation
+    
+    - **message**: User's question (in any supported language)
+    - **source_lang**: Language of the message (auto-detect if null)
+    - **target_lang**: Preferred language for response (default: source language)
+    - **history**: List of previous messages for context
+    """
+    try:
+        original_message = req.message
+        detected_lang = None
+        language_name = None
+        
+        # Step 1: Detect or validate source language
+        if req.source_lang is None:
+            detected_lang = translator.detect_language_code(req.message)
+            if detected_lang is None:
+                # Assume English if detection fails
+                detected_lang = "en_XX"
+            source_lang = detected_lang
+        else:
+            source_lang = req.source_lang
+            detected_lang = source_lang
+        
+        # Step 1.5: Determine target language (default to source if not provided)
+        target_lang = req.target_lang if req.target_lang else source_lang
+        
+        language_name = translator.SUPPORTED_LANGUAGES.get(detected_lang, "Unknown")
+        logger.info(f"Processing message in {language_name} ({detected_lang}) -> Respond in {target_lang}")
+        
+        # Step 2: Translate to English if needed (for RAG retrieval)
+        if source_lang != "en_XX":
+            english_message = translator.to_english(req.message, source_lang=source_lang)
+            logger.info(f"Translated query: {english_message}")
+        else:
+            english_message = req.message
+        
+        # Step 3: Retrieve relevant documents
+        docs = retriever.search(english_message, k=4)
+        
+        if not docs:
+            no_info_msg = "I do not have information about this. Please specify the scheme name."
+            
+            # Translate response if needed
+            if target_lang != "en_XX":
+                no_info_msg = translator.from_english(no_info_msg, target_lang)
+            
+            return ChatResponse(
+                reply=no_info_msg,
+                detected_language=detected_lang,
+                language_name=language_name,
+                original_message=original_message,
+                translated_message=english_message if source_lang != "en_XX" else None
+            )
+        
+        # Step 4: Generate answer
+        context = "\n\n".join([doc.page_content for doc in docs])
+        reply = generate_answer(
+            user_question=english_message,
+            context=context,
+            history=req.history
+        )
+        
+        # Step 5: Translate response if needed
+        if target_lang != "en_XX":
+            reply = translator.from_english(reply, target_lang)
+            logger.info(f"Translated response to {target_lang}")
+        
+        return ChatResponse(
+            reply=reply,
+            detected_language=detected_lang,
+            language_name=language_name,
+            original_message=original_message,
+            translated_message=english_message if source_lang != "en_XX" else None
+        )
+        
+    except Exception as e:
+        logger.error(f"Chat error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
+
+
+@app.post("/chat/multilingual")
+async def multilingual_chat(
+    message: str,
+    auto_detect: bool = True,
+    respond_in_same_language: bool = True
+):
+    """
+    Simplified multilingual chat endpoint
+    
+    - Automatically detects language
+    - Responds in the same language as the question
+    """
+    try:
+        # Detect source language
+        source_lang = translator.detect_language_code(message) if auto_detect else "en_XX"
+        
+        # Determine target language
+        target_lang = source_lang if respond_in_same_language else "en_XX"
+        
+        # Use main chat endpoint logic
+        req = ChatRequest(
+            message=message,
+            source_lang=source_lang,
+            target_lang=target_lang
+        )
+        
+        return await chat(req)
+        
+    except Exception as e:
+        logger.error(f"Multilingual chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Health check for translator
+@app.get("/health/translator")
+async def translator_health():
+    """Check if translator is working"""
+    try:
+        # Test translation
+        test = translator.translate("नमस्ते", source_lang="hi_IN", target_lang="en_XX")
+        return {
+            "status": "healthy",
+            "test_translation": test,
+            "device": translator.device,
+            "model": translator.model_name
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
         }
 
-    context = "\n\n".join([doc.page_content for doc in docs])
 
-    reply = generate_answer(
-        user_question=req.message,
-        context=context,
-    )
-
-    return {"reply": reply}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

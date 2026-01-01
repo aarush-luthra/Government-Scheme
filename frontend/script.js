@@ -1,6 +1,15 @@
+// Store chat history
+let chatHistory = [];
+
 async function sendMessage() {
     const input = document.getElementById("user-input");
     const chatBox = document.getElementById("chat-box");
+
+    // Remove welcome message if it exists
+    const welcomeMsg = document.querySelector(".welcome-message");
+    if (welcomeMsg) {
+        welcomeMsg.remove();
+    }
 
     const message = input.value.trim();
     if (!message) return;
@@ -10,21 +19,29 @@ async function sendMessage() {
     input.value = "";
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/chat", {
+        const response = await fetch("/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ message })
+            body: JSON.stringify({
+                message: message,
+                history: chatHistory
+            })
         });
 
         const data = await response.json();
+
+        // Update history with this turn
+        chatHistory.push({ role: "user", content: message });
+        chatHistory.push({ role: "assistant", content: data.reply });
 
         // IMPORTANT: markdown is parsed here
         addMessage("Assistant", data.reply, "bot");
 
     } catch (error) {
-        addMessage("Assistant", "❌ Unable to connect to server.", "bot");
+        addMessage("Assistant", "❌ Unable to connect to server. Please ensure the backend is running.", "bot");
+        console.error(error);
     }
 }
 
@@ -32,20 +49,17 @@ function addMessage(sender, text, className) {
     const chatBox = document.getElementById("chat-box");
 
     const msgDiv = document.createElement("div");
-    msgDiv.className = "message";
+    msgDiv.className = `message ${className}`;
 
-    // Parse markdown ONLY for bot
-    if (className === "bot") {
-        msgDiv.innerHTML = `
-            <span class="${className}">${sender}:</span>
-            <div class="markdown">${marked.parse(text)}</div>
-        `;
-    } else {
-        msgDiv.innerHTML = `
-            <span class="${className}">${sender}:</span>
-            ${text}
-        `;
-    }
+    // Helper to generate the content
+    const contentHtml = className === "bot" ? marked.parse(text) : text;
+
+    msgDiv.innerHTML = `
+        <div class="message-bubble">
+            ${contentHtml}
+        </div>
+        <div class="message-label">${sender}</div>
+    `;
 
     chatBox.appendChild(msgDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
