@@ -27,3 +27,6 @@ pydantic-settings>=2.4.0
 transformers>=4.41.2
 torch>=2.2.0
 sentencepiece>=0.2.0
+
+# PDF Processing
+pypdf>=4.0.0
