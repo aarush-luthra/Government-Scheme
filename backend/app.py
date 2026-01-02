@@ -5,6 +5,14 @@ from typing import Optional, List, Dict
 from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
+from backend.database import (
+    save_message, get_session_messages, count_bot_responses,
+    get_message_summary, get_session
+)
+from backend.auth import (
+    register_user, login_user, create_user_session,
+    link_session_to_user, validate_session, logout
+)
 from dotenv import load_dotenv
 import logging
 
@@ -24,7 +32,8 @@ app = FastAPI(
 translator = IndicBartTranslator()
 
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi import Cookie, Response
 import os
 
 # CORS configuration
@@ -87,7 +96,35 @@ class LanguageInfo(BaseModel):
     name: str
 
 
-# API Endpoints
+# Auth Request/Response Models
+class SignUpRequest(BaseModel):
+    name: str = Field(..., min_length=2, description="User's full name")
+    email: str = Field(..., description="User's email address")
+    password: str = Field(..., min_length=6, description="Password (min 6 chars)")
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., description="User's email address")
+    password: str = Field(..., description="User's password")
+
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    user: Optional[Dict] = None
+
+
+class SessionInfo(BaseModel):
+    session_id: str
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    is_logged_in: bool
+
+
+# Max bot responses before auth wall for anonymous users
+MAX_ANONYMOUS_RESPONSES = 3
+
+
 
 @app.get("/")
 async def serve_frontend():
@@ -103,6 +140,141 @@ async def health_check():
         "service": "Government Scheme Assistant",
         "supported_languages": len(translator.get_supported_languages())
     }
+
+
+# ============ Authentication Endpoints ============
+
+@app.post("/auth/signup", response_model=AuthResponse)
+async def signup(req: SignUpRequest, response: Response, session_id: Optional[str] = Cookie(None)):
+    """
+    Register a new user.
+    If session_id cookie exists, links the anonymous session to the new user.
+    """
+    try:
+        success, message, user_id = register_user(req.name, req.email, req.password)
+        
+        if not success:
+            return AuthResponse(success=False, message=message)
+        
+        # Create new session for user or link existing anonymous session
+        if session_id:
+            # Link existing session to new user
+            link_session_to_user(session_id, user_id)
+            new_session_id = session_id
+        else:
+            # Create new session
+            new_session_id = create_user_session(user_id)
+        
+        # Set session cookie
+        response.set_cookie(
+            key="session_id",
+            value=new_session_id,
+            httponly=True,
+            max_age=60 * 60 * 24 * 30,  # 30 days
+            samesite="lax"
+        )
+        
+        return AuthResponse(
+            success=True,
+            message="Registration successful",
+            user={
+                "user_id": user_id,
+                "name": req.name,
+                "email": req.email
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Signup error: {e}")
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+
+@app.post("/auth/login", response_model=AuthResponse)
+async def login(req: LoginRequest, response: Response, session_id: Optional[str] = Cookie(None)):
+    """
+    Authenticate a user.
+    If session_id cookie exists (anonymous session), links it to the logged-in user.
+    """
+    try:
+        success, message, user_data = login_user(req.email, req.password)
+        
+        if not success:
+            return AuthResponse(success=False, message=message)
+        
+        # Link existing session or create new one
+        if session_id:
+            link_session_to_user(session_id, user_data['user_id'])
+            new_session_id = session_id
+        else:
+            new_session_id = create_user_session(user_data['user_id'])
+        
+        # Set session cookie
+        response.set_cookie(
+            key="session_id",
+            value=new_session_id,
+            httponly=True,
+            max_age=60 * 60 * 24 * 30,  # 30 days
+            samesite="lax"
+        )
+        
+        return AuthResponse(
+            success=True,
+            message="Login successful",
+            user=user_data
+        )
+        
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail="Login failed")
+
+
+@app.post("/auth/logout")
+async def logout_user(response: Response, session_id: Optional[str] = Cookie(None)):
+    """Log out the current user by deleting their session."""
+    if session_id:
+        logout(session_id)
+    
+    response.delete_cookie("session_id")
+    return {"success": True, "message": "Logged out successfully"}
+
+
+@app.get("/auth/me", response_model=SessionInfo)
+async def get_current_user(response: Response, session_id: Optional[str] = Cookie(None)):
+    """Get current user session info."""
+    if not session_id:
+        # Create anonymous session
+        new_session_id = create_user_session()
+        response.set_cookie(
+            key="session_id",
+            value=new_session_id,
+            httponly=True,
+            max_age=60 * 60 * 24 * 30,
+            samesite="lax"
+        )
+        return SessionInfo(
+            session_id=new_session_id,
+            is_logged_in=False
+        )
+    
+    # Validate existing session
+    session_info = validate_session(session_id)
+    
+    if not session_info:
+        # Session doesn't exist, create new anonymous session
+        new_session_id = create_user_session()
+        response.set_cookie(
+            key="session_id",
+            value=new_session_id,
+            httponly=True,
+            max_age=60 * 60 * 24 * 30,
+            samesite="lax"
+        )
+        return SessionInfo(
+            session_id=new_session_id,
+            is_logged_in=False
+        )
+    
+    return SessionInfo(**session_info)
 
 
 @app.get("/languages", response_model=List[LanguageInfo])
@@ -198,18 +370,65 @@ async def batch_translate(req: BatchTranslateRequest):
         raise HTTPException(status_code=500, detail="Batch translation failed")
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+@app.post("/chat")
+async def chat(
+    req: ChatRequest,
+    response: Response,
+    session_id: Optional[str] = Cookie(None)
+):
     """
-    Chat with the assistant about government schemes
-    Supports all Indic languages with automatic translation
+    Chat with the assistant about government schemes.
+    Supports all Indic languages with automatic translation.
     
     - **message**: User's question (in any supported language)
     - **source_lang**: Language of the message (auto-detect if null)
     - **target_lang**: Preferred language for response (default: source language)
     - **history**: List of previous messages for context
+    
+    Returns auth_required=true if anonymous user exceeds response limit.
     """
     try:
+        # Ensure we have a session
+        if not session_id:
+            session_id = create_user_session()
+            response.set_cookie(
+                key="session_id",
+                value=session_id,
+                httponly=True,
+                max_age=60 * 60 * 24 * 30,
+                samesite="lax"
+            )
+        else:
+            # Validate session exists
+            session = get_session(session_id)
+            if not session:
+                session_id = create_user_session()
+                response.set_cookie(
+                    key="session_id",
+                    value=session_id,
+                    httponly=True,
+                    max_age=60 * 60 * 24 * 30,
+                    samesite="lax"
+                )
+        
+        # Get session info for context injection
+        session_info = validate_session(session_id)
+        is_logged_in = session_info and session_info.get('is_logged_in', False)
+        
+        # Check auth wall for anonymous users
+        if not is_logged_in:
+            bot_response_count = count_bot_responses(session_id)
+            if bot_response_count >= MAX_ANONYMOUS_RESPONSES:
+                return JSONResponse(content={
+                    "reply": None,
+                    "auth_required": True,
+                    "message": "Sign in or create an account to continue chatting",
+                    "response_count": bot_response_count
+                })
+        
+        # Save user message to database
+        save_message(session_id, "user", req.message)
+        
         original_message = req.message
         detected_lang = None
         language_name = None
@@ -218,20 +437,19 @@ async def chat(req: ChatRequest):
         if req.source_lang is None:
             detected_lang = translator.detect_language_code(req.message)
             if detected_lang is None:
-                # Assume English if detection fails
                 detected_lang = "en_XX"
             source_lang = detected_lang
         else:
             source_lang = req.source_lang
             detected_lang = source_lang
         
-        # Step 1.5: Determine target language (default to source if not provided)
+        # Step 1.5: Determine target language
         target_lang = req.target_lang if req.target_lang else source_lang
         
         language_name = translator.SUPPORTED_LANGUAGES.get(detected_lang, "Unknown")
         logger.info(f"Processing message in {language_name} ({detected_lang}) -> Respond in {target_lang}")
         
-        # Step 2: Translate to English if needed (for RAG retrieval)
+        # Step 2: Translate to English if needed
         if source_lang != "en_XX":
             english_message = translator.to_english(req.message, source_lang=source_lang)
             logger.info(f"Translated query: {english_message}")
@@ -241,28 +459,59 @@ async def chat(req: ChatRequest):
         # Step 3: Retrieve relevant documents
         docs = retriever.search(english_message, k=4)
         
-
+        # Step 4: Build context with user info if logged in
+        doc_context = "\n\n".join([doc.page_content for doc in docs])
         
-        # Step 4: Generate answer
-        context = "\n\n".join([doc.page_content for doc in docs])
+        # Context injection
+        system_context = ""
+        if is_logged_in and session_info:
+            user_name = session_info.get('user_name', 'User')
+            user_id = session_info.get('user_id')
+            message_summary = get_message_summary(session_id, limit=5)
+            system_context = f"""
+User Information:
+- Name: {user_name}
+- User ID: {user_id}
+
+Previous Conversation Summary:
+{message_summary}
+"""
+        else:
+            system_context = f"""
+Anonymous Session ID: {session_id}
+"""
+        
+        # Combine contexts
+        full_context = f"{system_context}\n\nRelevant Information:\n{doc_context}"
+        
+        # Step 5: Generate answer
         reply = generate_answer(
             user_question=english_message,
-            context=context,
+            context=full_context,
             history=req.history
         )
         
-        # Step 5: Translate response if needed
+        # Step 6: Translate response if needed
         if target_lang != "en_XX":
             reply = translator.from_english(reply, target_lang)
             logger.info(f"Translated response to {target_lang}")
         
-        return ChatResponse(
-            reply=reply,
-            detected_language=detected_lang,
-            language_name=language_name,
-            original_message=original_message,
-            translated_message=english_message if source_lang != "en_XX" else None
-        )
+        # Save bot response to database
+        save_message(session_id, "bot", reply)
+        
+        # Get updated response count for anonymous users
+        response_count = count_bot_responses(session_id) if not is_logged_in else None
+        
+        return JSONResponse(content={
+            "reply": reply,
+            "detected_language": detected_lang,
+            "language_name": language_name,
+            "original_message": original_message,
+            "translated_message": english_message if source_lang != "en_XX" else None,
+            "auth_required": False,
+            "response_count": response_count,
+            "remaining_free": MAX_ANONYMOUS_RESPONSES - response_count if response_count else None
+        })
         
     except Exception as e:
         logger.error(f"Chat error: {e}", exc_info=True)

@@ -5,6 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Government Scheme Assistant</title>
+    <meta name="description" content="AI-powered assistant helping Indian citizens understand government schemes in their native language">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,40 +20,267 @@
 </head>
 
 <body>
-
-    <div class="chat-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo-text">
+    <!-- Landing Page -->
+    <div id="landing-page" class="landing-page">
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <div class="nav-logo">
                 🏛️ Government Scheme Assistant
             </div>
-            <div class="status-badge">
-                <div class="status-dot"></div>
-                Online
+            <div class="nav-actions">
+                <button class="btn btn-ghost" onclick="openAuthModal('signin')">Sign In</button>
+                <button class="btn btn-primary" onclick="openAuthModal('signup')">Sign Up</button>
             </div>
-        </div>
+        </nav>
 
-        <!-- Chat Area -->
-        <div id="chat-box">
-            <!-- Welcome Message Placeholder -->
-            <div class="welcome-message">
-                <div class="welcome-title">Welcome to Government Scheme Assistant</div>
-                <p>I can help you understand eligibility, benefits, and application processes for Indian government
-                    schemes in your preferred language.</p>
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="input-area">
-            <div class="input-wrapper">
-                <input type="text" id="user-input" placeholder="Type your message..."
-                    onkeydown="if(event.key==='Enter') sendMessage()" autocomplete="off" />
-                <button onclick="sendMessage()" aria-label="Send">
-                    <svg viewBox="0 0 24 24">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        <!-- Hero Section -->
+        <div class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">Your AI Guide to Government Schemes</h1>
+                <p class="hero-description">
+                    Get personalized help understanding Indian government schemes. 
+                    Ask questions in your preferred language — Hindi, Tamil, Bengali, and 11+ more — 
+                    and receive accurate, easy-to-understand answers powered by AI.
+                </p>
+                <ul class="hero-features">
+                    <li>🗣️ <strong>Multilingual Support</strong> — Ask in your native language</li>
+                    <li>📚 <strong>Accurate Information</strong> — Curated knowledge from official sources</li>
+                    <li>💬 <strong>Conversational AI</strong> — Natural back-and-forth dialogue</li>
+                </ul>
+                <button class="btn btn-cta" onclick="startChat()">
+                    Continue to Chat
+                    <svg viewBox="0 0 24 24" class="btn-icon">
+                        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Container (hidden initially) -->
+    <div id="chat-page" class="chat-page hidden">
+        <div class="chat-container">
+            <!-- Header -->
+            <div class="header">
+                <div class="logo-text">
+                    🏛️ Government Scheme Assistant
+                </div>
+                <div class="header-right">
+                    <div class="status-badge">
+                        <div class="status-dot"></div>
+                        Online
+                    </div>
+                    <div id="user-menu" class="user-menu hidden">
+                        <span id="user-name-display"></span>
+                        <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Logout</button>
+                    </div>
+                    <div id="auth-buttons" class="auth-buttons">
+                        <button class="btn btn-ghost btn-sm" onclick="openAuthModal('signin')">Sign In</button>
+                        <button class="btn btn-primary btn-sm" onclick="openAuthModal('signup')">Sign Up</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chat-box">
+                <!-- Welcome Message Placeholder -->
+                <div class="welcome-message">
+                    <div class="welcome-title">Welcome to Government Scheme Assistant</div>
+                    <p>I can help you understand eligibility, benefits, and application processes for Indian government
+                        schemes in your preferred language.</p>
+                </div>
+            </div>
+
+            <!-- Response Limit Warning -->
+            <div id="response-limit-banner" class="response-limit-banner hidden">
+                <span id="responses-remaining">3 free messages remaining</span>
+            </div>
+
+            <!-- Input Area -->
+            <div id="input-area" class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="user-input" placeholder="Type your message..."
+                        onkeydown="if(event.key==='Enter') sendMessage()" autocomplete="off" />
+                    <button onclick="sendMessage()" aria-label="Send">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal Overlay -->
+    <div id="auth-modal" class="modal-overlay hidden" onclick="handleOverlayClick(event)">
+        <div class="modal-container" onclick="event.stopPropagation()">
+            <!-- Close Button -->
+            <button class="modal-close" onclick="closeAuthModal()">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+
+            <!-- Progress Indicator -->
+            <div id="progress-indicator" class="progress-indicator">
+                <div class="progress-step completed" data-step="1">
+                    <div class="step-circle">
+                        <svg class="check-icon" viewBox="0 0 24 24" width="14" height="14">
+                            <polyline points="20 6 9 17 4 12" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="step-number">1</span>
+                    </div>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="2">
+                    <div class="step-circle">
+                        <span class="step-number">2</span>
+                    </div>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="3">
+                    <div class="step-circle">
+                        <span class="step-number">3</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auth Prompt Message (for auth wall) -->
+            <div id="auth-prompt-message" class="auth-prompt-message hidden">
+                Sign in or create an account to continue chatting
+            </div>
+
+            <!-- Form Content -->
+            <div class="form-slides-container">
+                <div id="form-slides" class="form-slides">
+                    
+                    <!-- Sign Up Step 1: Personal Info -->
+                    <div class="form-slide" data-form="signup" data-step="1">
+                        <h2 class="form-title">Create Your Account</h2>
+                        <p class="form-subtitle">Let's start with your name</p>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Full Name <span class="required">*</span></label>
+                            <input type="text" id="signup-name" class="form-input" placeholder="Enter your name" autocomplete="name" />
+                            <span class="form-error" id="error-signup-name"></span>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary btn-full" onclick="nextStep()">
+                                Next
+                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
+                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="form-footer">
+                            Already have an account? <a href="#" onclick="switchToSignIn(event)">Sign In</a>
+                        </div>
+                    </div>
+
+                    <!-- Sign Up Step 2: Email & Password -->
+                    <div class="form-slide" data-form="signup" data-step="2">
+                        <h2 class="form-title">Account Details</h2>
+                        <p class="form-subtitle">Enter your email and create a password</p>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email Address <span class="required">*</span></label>
+                            <input type="email" id="signup-email" class="form-input" placeholder="you@example.com" autocomplete="email" />
+                            <span class="form-error" id="error-signup-email"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Password <span class="required">*</span></label>
+                            <input type="password" id="signup-password" class="form-input" placeholder="At least 6 characters" autocomplete="new-password" />
+                            <span class="form-error" id="error-signup-password"></span>
+                        </div>
+
+                        <div class="form-actions form-actions-dual">
+                            <button class="btn btn-ghost" onclick="prevStep()">Back</button>
+                            <button class="btn btn-primary" onclick="nextStep()">
+                                Next
+                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
+                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sign Up Step 3: Confirm -->
+                    <div class="form-slide" data-form="signup" data-step="3">
+                        <h2 class="form-title">Confirm Your Details</h2>
+                        <p class="form-subtitle">Almost there! Confirm your password to finish</p>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Confirm Password <span class="required">*</span></label>
+                            <input type="password" id="signup-confirm-password" class="form-input" placeholder="Re-enter your password" autocomplete="new-password" />
+                            <span class="form-error" id="error-signup-confirm-password"></span>
+                        </div>
+
+                        <div class="form-group form-group-checkbox">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="signup-terms" />
+                                <span class="checkbox-custom"></span>
+                                I agree to the Terms of Service
+                            </label>
+                            <span class="form-error" id="error-signup-terms"></span>
+                        </div>
+
+                        <div class="form-actions form-actions-dual">
+                            <button class="btn btn-ghost" onclick="prevStep()">Back</button>
+                            <button class="btn btn-primary" onclick="submitSignUp()">
+                                Submit
+                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
+                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sign In Form (single step) -->
+                    <div class="form-slide" data-form="signin" data-step="1">
+                        <h2 class="form-title">Welcome Back</h2>
+                        <p class="form-subtitle">Sign in to continue chatting</p>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email Address <span class="required">*</span></label>
+                            <input type="email" id="signin-email" class="form-input" placeholder="you@example.com" autocomplete="email" />
+                            <span class="form-error" id="error-signin-email"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Password <span class="required">*</span></label>
+                            <input type="password" id="signin-password" class="form-input" placeholder="Enter your password" autocomplete="current-password" />
+                            <span class="form-error" id="error-signin-password"></span>
+                        </div>
+
+                        <div class="form-link">
+                            <a href="#">Forgot Password?</a>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary btn-full" onclick="submitSignIn()">
+                                Sign In
+                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
+                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="form-footer">
+                            Don't have an account? <a href="#" onclick="switchToSignUp(event)">Sign Up</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="form-loading" class="form-loading hidden">
+                <div class="spinner"></div>
+                <p>Processing...</p>
             </div>
         </div>
     </div>
