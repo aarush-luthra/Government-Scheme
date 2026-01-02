@@ -241,20 +241,7 @@ async def chat(req: ChatRequest):
         # Step 3: Retrieve relevant documents
         docs = retriever.search(english_message, k=4)
         
-        if not docs:
-            no_info_msg = "I do not have information about this. Please specify the scheme name."
-            
-            # Translate response if needed
-            if target_lang != "en_XX":
-                no_info_msg = translator.from_english(no_info_msg, target_lang)
-            
-            return ChatResponse(
-                reply=no_info_msg,
-                detected_language=detected_lang,
-                language_name=language_name,
-                original_message=original_message,
-                translated_message=english_message if source_lang != "en_XX" else None
-            )
+
         
         # Step 4: Generate answer
         context = "\n\n".join([doc.page_content for doc in docs])
