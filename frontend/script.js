@@ -127,6 +127,7 @@ function initializeLanguage() {
     }
 
     updateLanguageDisplay(currentLanguage);
+    updateAgeDropdown(currentLanguage);
 }
 
 function initializeLanguageDropdowns() {
@@ -255,6 +256,7 @@ if (targetLang === 'en_XX') {
     } finally {
         document.body.style.cursor = 'default';
     }
+    updateAgeDropdown(targetLang);
 }
 
 function updateLanguageDisplay(langCode) {
@@ -290,6 +292,38 @@ function updateLanguageDisplay(langCode) {
     });
 }
 
+// Function to populate Age dropdown with localized numbers
+function updateAgeDropdown(langCode) {
+    const select = document.getElementById('sf-age');
+    if (!select) return;
+
+    // 1. Convert your API code (e.g., 'hi_IN') to Browser Locale (e.g., 'hi-IN')
+    let locale = langCode.replace('_', '-');
+    if (langCode === 'en_XX') locale = 'en-US'; // Fallback for your custom English code
+
+    // 2. Save the user's currently selected age (so it doesn't reset)
+    const currentSelection = select.value;
+
+    // 3. Clear existing options (EXCEPT the first "Select age" placeholder)
+    // We assume the first option is the placeholder
+    const placeholderOption = select.options[0];
+    select.innerHTML = ''; 
+    select.appendChild(placeholderOption);
+
+    // 4. Create the Number Formatter for the chosen language
+    const numberFormatter = new Intl.NumberFormat(locale);
+
+    // 5. Loop to create options
+    for (let i = 18; i <= 100; i++) {
+        const option = document.createElement('option');
+        option.value = i; // The value sent to backend stays "18" (Integers)
+        option.text = numberFormatter.format(i); // The display text becomes "१८"
+        select.appendChild(option);
+    }
+
+    // 6. Restore the user's selection
+    select.value = currentSelection;
+}
 // ============ Page Navigation ============
 function startChat() {
     document.getElementById('landing-page').classList.add('hidden');
