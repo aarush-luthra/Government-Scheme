@@ -60,6 +60,31 @@ def init_db():
         )
     """)
     
+    # User profiles table (from Scheme Finder form)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_profiles (
+            profile_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            name TEXT,
+            email TEXT,
+            password_hash TEXT,
+            gender TEXT,
+            age INTEGER,
+            state TEXT,
+            area TEXT,
+            category TEXT,
+            is_disabled BOOLEAN DEFAULT 0,
+            is_minority BOOLEAN DEFAULT 0,
+            is_student BOOLEAN DEFAULT 0,
+            employment_status TEXT,
+            is_govt_employee BOOLEAN DEFAULT 0,
+            annual_income REAL,
+            family_income REAL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES sessions (session_id)
+        )
+    """)
+    
     conn.commit()
     conn.close()
 
@@ -227,5 +252,62 @@ def get_message_summary(session_id: str, limit: int = 5) -> str:
     return "\n".join(summary_parts)
 
 
+# ============ Profile Operations ============
+
+def save_user_profile(session_id: str, profile_data: Dict[str, Any]) -> str:
+    """Save user profile from Scheme Finder form."""
+    profile_id = str(uuid.uuid4())
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        INSERT INTO user_profiles (
+            profile_id, session_id, name, email, password_hash,
+            gender, age, state, area, category,
+            is_disabled, is_minority, is_student,
+            employment_status, is_govt_employee,
+            annual_income, family_income
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        profile_id,
+        session_id,
+        profile_data.get('name'),
+        profile_data.get('email'),
+        profile_data.get('password_hash'),
+        profile_data.get('gender'),
+        profile_data.get('age'),
+        profile_data.get('state'),
+        profile_data.get('area'),
+        profile_data.get('category'),
+        profile_data.get('is_disabled', False),
+        profile_data.get('is_minority', False),
+        profile_data.get('is_student', False),
+        profile_data.get('employment_status'),
+        profile_data.get('is_govt_employee', False),
+        profile_data.get('annual_income'),
+        profile_data.get('family_income')
+    ))
+    
+    conn.commit()
+    conn.close()
+    return profile_id
+
+
+def get_user_profile(session_id: str) -> Optional[Dict[str, Any]]:
+    """Get user profile by session_id."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT * FROM user_profiles WHERE session_id = ? ORDER BY created_at DESC LIMIT 1",
+        (session_id,)
+    )
+    row = cursor.fetchone()
+    
+    conn.close()
+    return dict(row) if row else None
+
+
 # Initialize database on module import
 init_db()
+

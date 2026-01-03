@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Government Scheme Assistant</title>
-    <meta name="description" content="AI-powered assistant helping Indian citizens understand government schemes in their native language">
+    <title data-i18n="app_title">Government Scheme Assistant</title>
+    <meta name="description"
+        content="AI-powered assistant helping Indian citizens understand government schemes in their native language">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,32 +26,80 @@
         <!-- Navigation Bar -->
         <nav class="navbar">
             <div class="nav-logo">
-                🏛️ Government Scheme Assistant
+                <span data-i18n="app_title">Government Scheme Assistant</span>
             </div>
             <div class="nav-actions">
-                <button class="btn btn-ghost" onclick="openAuthModal('signin')">Sign In</button>
-                <button class="btn btn-primary" onclick="openAuthModal('signup')">Sign Up</button>
+                <!-- Language Dropdown -->
+                <div class="dropdown" id="language-dropdown">
+                    <button class="btn btn-icon-text" onclick="toggleLanguageDropdown()">
+                        <span class="lang-icon">अ</span>
+                        <span id="current-lang">English</span>
+                        <svg class="dropdown-arrow" viewBox="0 0 24 24" width="16" height="16">
+                            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none"
+                                stroke-linecap="round" />
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="language-menu">
+                        <button class="dropdown-item active" data-lang="en_XX">English</button>
+                        <button class="dropdown-item" data-lang="hi_IN">हिन्दी - Hindi</button>
+                        <button class="dropdown-item" data-lang="or_IN">ଓଡ଼ିଆ - Odia</button>
+                        <button class="dropdown-item" data-lang="as_IN">অসমীয়া - Assamese</button>
+                        <button class="dropdown-item" data-lang="bn_IN">বাংলা - Bengali</button>
+                        <button class="dropdown-item" data-lang="gu_IN">ગુજરાતી - Gujarati</button>
+                        <button class="dropdown-item" data-lang="kn_IN">ಕನ್ನಡ - Kannada</button>
+                        <button class="dropdown-item" data-lang="ml_IN">മലയാളം - Malayalam</button>
+                        <button class="dropdown-item" data-lang="mr_IN">मराठी - Marathi</button>
+                        <button class="dropdown-item" data-lang="pa_IN">ਪੰਜਾਬੀ - Punjabi</button>
+                        <button class="dropdown-item" data-lang="ta_IN">தமிழ் - Tamil</button>
+                        <button class="dropdown-item" data-lang="te_IN">తెలుగు - Telugu</button>
+                        <button class="dropdown-item" data-lang="ur_IN">اردو - Urdu</button>
+                        <button class="dropdown-item" data-lang="ks_IN">कॉशुर - Kashmiri</button>
+                        <button class="dropdown-item" data-lang="mai_IN">मैथिली - Maithili</button>
+                        <div class="dropdown-footer">Powered by <strong>BHASHINI</strong></div>
+                    </div>
+                </div>
+
+                <!-- Dark Mode Toggle -->
+                <button class="btn btn-icon" onclick="toggleDarkMode()" title="Toggle dark/light mode"
+                    id="theme-toggle">
+                    <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />
+                        <path
+                            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                    </svg>
+                    <svg class="icon-moon hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"
+                        stroke="none">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                </button>
+
+                <button class="btn btn-primary" onclick="openAuthModal('signin')" data-i18n="signin">Sign In →</button>
             </div>
         </nav>
 
         <!-- Hero Section -->
         <div class="hero">
             <div class="hero-content">
-                <h1 class="hero-title">Your AI Guide to Government Schemes</h1>
-                <p class="hero-description">
-                    Get personalized help understanding Indian government schemes. 
-                    Ask questions in your preferred language — Hindi, Tamil, Bengali, and 11+ more — 
+                <h1 class="hero-title" data-i18n="hero-title">Your AI Guide to Government Schemes</h1>
+                <p class="hero-description" data-i18n="hero-desc">
+                    Get personalized help understanding Indian government schemes.
+                    Ask questions in your preferred language — Hindi, Tamil, Bengali, and 11+ more —
                     and receive accurate, easy-to-understand answers powered by AI.
                 </p>
                 <ul class="hero-features">
-                    <li>🗣️ <strong>Multilingual Support</strong> — Ask in your native language</li>
-                    <li>📚 <strong>Accurate Information</strong> — Curated knowledge from official sources</li>
-                    <li>💬 <strong>Conversational AI</strong> — Natural back-and-forth dialogue</li>
+                    <li data-i18n="feature-1"><strong>Multilingual Support</strong> — Ask in your native language
+                    </li>
+                    <li data-i18n="feature-2"><strong>Accurate Information</strong> — Curated knowledge from official
+                        sources</li>
+                    <li data-i18n="feature-3"><strong>Conversational AI</strong> — Natural back-and-forth dialogue
+                    </li>
                 </ul>
-                <button class="btn btn-cta" onclick="startChat()">
+                <button class="btn btn-cta" onclick="openSchemeFinderModal()" data-i18n="cta-btn">
                     Continue to Chat
                     <svg viewBox="0 0 24 24" class="btn-icon">
-                        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none"
+                            stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </button>
             </div>
@@ -63,44 +112,84 @@
             <!-- Header -->
             <div class="header">
                 <div class="logo-text">
-                    🏛️ Government Scheme Assistant
+                    <span data-i18n="logo-text">Government Scheme Assistant</span>
                 </div>
                 <div class="header-right">
                     <div class="status-badge">
                         <div class="status-dot"></div>
-                        Online
+                        <span data-i18n="status-online">Online</span>
                     </div>
+
+                    <!-- Language Dropdown (Chat) -->
+                    <div class="dropdown" id="chat-language-dropdown">
+                        <button class="btn btn-icon-text btn-sm" onclick="toggleChatLanguageDropdown()">
+                            <span class="lang-icon">अ</span>
+                            <span id="chat-current-lang">English</span>
+                        </button>
+                        <div class="dropdown-menu" id="chat-language-menu">
+                            <button class="dropdown-item active" data-lang="en_XX">English</button>
+                            <button class="dropdown-item" data-lang="hi_IN">हिन्दी - Hindi</button>
+                            <button class="dropdown-item" data-lang="or_IN">ଓଡ଼ିଆ - Odia</button>
+                            <button class="dropdown-item" data-lang="as_IN">অসমীয়া - Assamese</button>
+                            <button class="dropdown-item" data-lang="bn_IN">বাংলা - Bengali</button>
+                            <button class="dropdown-item" data-lang="gu_IN">ગુજરાતી - Gujarati</button>
+                            <button class="dropdown-item" data-lang="kn_IN">ಕನ್ನಡ - Kannada</button>
+                            <button class="dropdown-item" data-lang="ml_IN">മലയാളം - Malayalam</button>
+                            <button class="dropdown-item" data-lang="mr_IN">मराठी - Marathi</button>
+                            <button class="dropdown-item" data-lang="pa_IN">ਪੰਜਾਬੀ - Punjabi</button>
+                            <button class="dropdown-item" data-lang="ta_IN">தமிழ் - Tamil</button>
+                            <button class="dropdown-item" data-lang="te_IN">తెలుగు - Telugu</button>
+                            <button class="dropdown-item" data-lang="ur_IN">اردو - Urdu</button>
+                        </div>
+                    </div>
+
+                    <!-- Dark Mode Toggle (Chat) -->
+                    <button class="btn btn-icon btn-sm" onclick="toggleDarkMode()" title="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />
+                            <path
+                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                        </svg>
+                        <svg class="icon-moon hidden" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"
+                            stroke="none">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                        </svg>
+                    </button>
+
                     <div id="user-menu" class="user-menu hidden">
-                        <span id="user-name-display"></span>
-                        <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Logout</button>
+                        <span id="user-name-display" data-i18n="user-name-display"></span>
+                        <button class="btn btn-ghost btn-sm" onclick="handleLogout()" data-i18n="logout">Logout</button>
                     </div>
                     <div id="auth-buttons" class="auth-buttons">
-                        <button class="btn btn-ghost btn-sm" onclick="openAuthModal('signin')">Sign In</button>
-                        <button class="btn btn-primary btn-sm" onclick="openAuthModal('signup')">Sign Up</button>
+                        <button class="btn btn-primary btn-sm" onclick="openAuthModal('signin')" data-i18n="signin">Sign
+                            In</button>
                     </div>
                 </div>
             </div>
 
             <!-- Chat Area -->
             <div id="chat-box">
-                <!-- Welcome Message Placeholder -->
                 <div class="welcome-message">
-                    <div class="welcome-title">Welcome to Government Scheme Assistant</div>
-                    <p>I can help you understand eligibility, benefits, and application processes for Indian government
+                    <div class="welcome-title" data-i18n="chat_welcome_title">Welcome to Government Scheme Assistant
+                    </div>
+                    <p data-i18n="chat_welcome_desc">I can help you understand eligibility, benefits, and application
+                        processes for Indian government
                         schemes in your preferred language.</p>
                 </div>
             </div>
 
             <!-- Response Limit Warning -->
             <div id="response-limit-banner" class="response-limit-banner hidden">
-                <span id="responses-remaining">3 free messages remaining</span>
+                <span id="responses-remaining" data-i18n="chat_limit_msg">3 free messages remaining</span>
             </div>
 
             <!-- Input Area -->
             <div id="input-area" class="input-area">
                 <div class="input-wrapper">
                     <input type="text" id="user-input" placeholder="Type your message..."
-                        onkeydown="if(event.key==='Enter') sendMessage()" autocomplete="off" />
+                        onkeydown="if(event.key==='Enter') sendMessage()" autocomplete="off"
+                        data-i18n-placeholder="chat_input_placeholder" />
                     <button onclick="sendMessage()" aria-label="Send">
                         <svg viewBox="0 0 24 24">
                             <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -112,175 +201,326 @@
         </div>
     </div>
 
-    <!-- Auth Modal Overlay -->
-    <div id="auth-modal" class="modal-overlay hidden" onclick="handleOverlayClick(event)">
-        <div class="modal-container" onclick="event.stopPropagation()">
+    <!-- Scheme Finder Modal -->
+    <div id="scheme-finder-modal" class="modal-overlay hidden" onclick="handleSchemeFinderOverlayClick(event)">
+        <div class="modal-container modal-lg" onclick="event.stopPropagation()">
             <!-- Close Button -->
-            <button class="modal-close" onclick="closeAuthModal()">
+            <button class="modal-close" onclick="closeSchemeFinderModal()">
                 <svg viewBox="0 0 24 24" width="24" height="24">
-                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 </svg>
             </button>
 
-            <!-- Progress Indicator -->
-            <div id="progress-indicator" class="progress-indicator">
-                <div class="progress-step completed" data-step="1">
-                    <div class="step-circle">
-                        <svg class="check-icon" viewBox="0 0 24 24" width="14" height="14">
-                            <polyline points="20 6 9 17 4 12" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span class="step-number">1</span>
+            <h2 class="modal-title" data-i18n="sf_modal_title">Help us find the best schemes for you</h2>
+
+            <!-- Form Content (Single Page) -->
+            <div class="scheme-form-container">
+                <div class="scheme-form-content">
+
+                    <!-- Section 1: Account -->
+                    <div class="form-section">
+                        <h3 data-i18n="sf_h_account">Create your account</h3>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_name">Full Name <span
+                                    class="required">*</span></label>
+                            <input type="text" id="sf-name" class="form-input" placeholder="Enter your name"
+                                data-i18n-placeholder="sf_pl_name" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_email">Email Address <span
+                                    class="required">*</span></label>
+                            <input type="email" id="sf-email" class="form-input" placeholder="you@example.com"
+                                data-i18n-placeholder="sf_pl_email" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_pass">Password <span
+                                    class="required">*</span></label>
+                            <input type="password" id="sf-password" class="form-input"
+                                placeholder="At least 6 characters" data-i18n-placeholder="sf_pl_pass" />
+                        </div>
                     </div>
-                </div>
-                <div class="progress-line"></div>
-                <div class="progress-step" data-step="2">
-                    <div class="step-circle">
-                        <span class="step-number">2</span>
+
+                    <!-- Section 2: Personal Details -->
+                    <div class="form-section">
+                        <h3 data-i18n="sf_h_about">About You</h3>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_gender">Gender <span
+                                    class="required">*</span></label>
+                            <div class="selection-cards" id="gender-selection">
+                                <button class="selection-card" data-value="male" onclick="selectCard(this, 'gender')">
+                                    <span class="card-icon">♂</span><span data-i18n="sf_opt_male">Male</span>
+                                </button>
+                                <button class="selection-card" data-value="female" onclick="selectCard(this, 'gender')">
+                                    <span class="card-icon">♀</span><span data-i18n="sf_opt_female">Female</span>
+                                </button>
+                                <button class="selection-card" data-value="transgender"
+                                    onclick="selectCard(this, 'gender')">
+                                    <span class="card-icon">⚧</span><span data-i18n="sf_opt_trans">Transgender</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_age">Age <span class="required">*</span></label>
+                            <div class="age-input-row">
+                                <select id="sf-age" class="form-select">
+                                    <option value="" data-i18n="sf_opt_sel_age">Select age</option>
+                                    <script>
+                                        for (let i = 18; i <= 100; i++) {
+                                            document.write(`<option value="${i}">${i}</option>`);
+                                        }
+                                    </script>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="progress-line"></div>
-                <div class="progress-step" data-step="3">
-                    <div class="step-circle">
-                        <span class="step-number">3</span>
+
+                    <!-- Section 3: Location -->
+                    <div class="form-section">
+                        <h3 data-i18n="sf_h_loc">Location</h3>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_state">State</label>
+                            <select id="sf-state" class="form-select">
+                                <option value="" data-i18n="sf_opt_sel_state">Select State</option>
+                                <option value="AP">Andhra Pradesh</option>
+                                <option value="AR">Arunachal Pradesh</option>
+                                <option value="AS">Assam</option>
+                                <option value="BR">Bihar</option>
+                                <option value="CG">Chhattisgarh</option>
+                                <option value="GA">Goa</option>
+                                <option value="GJ">Gujarat</option>
+                                <option value="HR">Haryana</option>
+                                <option value="HP">Himachal Pradesh</option>
+                                <option value="JH">Jharkhand</option>
+                                <option value="KA">Karnataka</option>
+                                <option value="KL">Kerala</option>
+                                <option value="MP">Madhya Pradesh</option>
+                                <option value="MH">Maharashtra</option>
+                                <option value="MN">Manipur</option>
+                                <option value="ML">Meghalaya</option>
+                                <option value="MZ">Mizoram</option>
+                                <option value="NL">Nagaland</option>
+                                <option value="OR">Odisha</option>
+                                <option value="PB">Punjab</option>
+                                <option value="RJ">Rajasthan</option>
+                                <option value="SK">Sikkim</option>
+                                <option value="TN">Tamil Nadu</option>
+                                <option value="TG">Telangana</option>
+                                <option value="TR">Tripura</option>
+                                <option value="UP">Uttar Pradesh</option>
+                                <option value="UK">Uttarakhand</option>
+                                <option value="WB">West Bengal</option>
+                                <option value="AN">Andaman & Nicobar</option>
+                                <option value="CH">Chandigarh</option>
+                                <option value="DL">Delhi</option>
+                                <option value="JK">Jammu & Kashmir</option>
+                                <option value="LA">Ladakh</option>
+                                <option value="LD">Lakshadweep</option>
+                                <option value="PY">Puducherry</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_area">Area Type <span
+                                    class="required">*</span></label>
+                            <div class="toggle-buttons" id="area-selection">
+                                <button class="toggle-btn" data-value="urban" onclick="selectToggle(this, 'area')">
+                                    <span data-i18n="sf_opt_urban">Urban</span>
+                                </button>
+                                <button class="toggle-btn" data-value="rural" onclick="selectToggle(this, 'area')">
+                                    <span data-i18n="sf_opt_rural">Rural</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Section 4: Social Category -->
+                    <div class="form-section">
+                        <h3 data-i18n="sf_h_social">Social Details</h3>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_cat">Category <span
+                                    class="required">*</span></label>
+                            <div class="category-cards" id="category-selection">
+                                <button class="category-card" data-value="general" onclick="selectCategory(this)">
+                                    <span data-i18n="sf_cat_gen">General</span>
+                                </button>
+                                <button class="category-card" data-value="obc" onclick="selectCategory(this)">
+                                    <span data-i18n="sf_cat_obc">OBC</span>
+                                </button>
+                                <button class="category-card" data-value="pvtg" onclick="selectCategory(this)">
+                                    <span data-i18n="sf_cat_pvtg">PVTG</span>
+                                </button>
+                                <button class="category-card" data-value="sc" onclick="selectCategory(this)">
+                                    <span data-i18n="sf_cat_sc">SC</span>
+                                </button>
+                                <button class="category-card" data-value="st" onclick="selectCategory(this)">
+                                    <span data-i18n="sf_cat_st">ST</span>
+                                </button>
+                                <button class="category-card" data-value="dnt" onclick="selectCategory(this)">
+                                    <span data-i18n="sf_cat_dnt">DNT</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_pwd">Person with Disability? <span
+                                    class="required">*</span></label>
+                            <div class="toggle-buttons" id="disability-selection">
+                                <button class="toggle-btn" data-value="yes" onclick="selectToggle(this, 'disability')">
+                                    <span data-i18n="sf_opt_yes">Yes</span>
+                                </button>
+                                <button class="toggle-btn" data-value="no" onclick="selectToggle(this, 'disability')">
+                                    <span data-i18n="sf_opt_no">No</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_minor">Minority? <span
+                                    class="required">*</span></label>
+                            <div class="toggle-buttons" id="minority-selection">
+                                <button class="toggle-btn" data-value="yes" onclick="selectToggle(this, 'minority')">
+                                    <span data-i18n="sf_opt_yes">Yes</span>
+                                </button>
+                                <button class="toggle-btn" data-value="no" onclick="selectToggle(this, 'minority')">
+                                    <span data-i18n="sf_opt_no">No</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Employment & Education -->
+                    <div class="form-section">
+                        <h3 data-i18n="sf_h_emp">Employment & Education</h3>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_student">Student? <span
+                                    class="required">*</span></label>
+                            <div class="toggle-buttons" id="student-selection">
+                                <button class="toggle-btn" data-value="yes" onclick="selectToggle(this, 'student')">
+                                    <span data-i18n="sf_opt_yes">Yes</span>
+                                </button>
+                                <button class="toggle-btn" data-value="no" onclick="selectToggle(this, 'student')">
+                                    <span data-i18n="sf_opt_no">No</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_status">Employment Status <span
+                                    class="required">*</span></label>
+                            <div class="selection-cards employment-cards" id="employment-selection">
+                                <button class="selection-card" data-value="employed"
+                                    onclick="selectCard(this, 'employment')">
+                                    <span data-i18n="sf_emp_emp">Employed</span>
+                                </button>
+                                <button class="selection-card" data-value="unemployed"
+                                    onclick="selectCard(this, 'employment')">
+                                    <span data-i18n="sf_emp_unemp">Unemployed</span>
+                                </button>
+                                <button class="selection-card" data-value="self-employed"
+                                    onclick="selectCard(this, 'employment')">
+                                    <span data-i18n="sf_emp_self">Self-Employed</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_govt">Govt Employee? <span
+                                    class="required">*</span></label>
+                            <div class="toggle-buttons" id="govt-employee-selection">
+                                <button class="toggle-btn" data-value="yes"
+                                    onclick="selectToggle(this, 'govt-employee')">
+                                    <span data-i18n="sf_opt_yes">Yes</span>
+                                </button>
+                                <button class="toggle-btn" data-value="no"
+                                    onclick="selectToggle(this, 'govt-employee')">
+                                    <span data-i18n="sf_opt_no">No</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 6: Income -->
+                    <div class="form-section">
+                        <h3 data-i18n="sf_h_income">Income Details</h3>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_inc_ann">Annual Income (₹)</label>
+                            <input type="number" id="sf-annual-income" class="form-input" placeholder="0"
+                                data-i18n-placeholder="sf_pl_zero" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="sf_lbl_inc_fam">Family Income (₹)</label>
+                            <input type="number" id="sf-family-income" class="form-input" placeholder="0"
+                                data-i18n-placeholder="sf_pl_zero" />
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- Auth Prompt Message (for auth wall) -->
-            <div id="auth-prompt-message" class="auth-prompt-message hidden">
-                Sign in or create an account to continue chatting
-            </div>
-
-            <!-- Form Content -->
-            <div class="form-slides-container">
-                <div id="form-slides" class="form-slides">
-                    
-                    <!-- Sign Up Step 1: Personal Info -->
-                    <div class="form-slide" data-form="signup" data-step="1">
-                        <h2 class="form-title">Create Your Account</h2>
-                        <p class="form-subtitle">Let's start with your name</p>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Full Name <span class="required">*</span></label>
-                            <input type="text" id="signup-name" class="form-input" placeholder="Enter your name" autocomplete="name" />
-                            <span class="form-error" id="error-signup-name"></span>
-                        </div>
-
-                        <div class="form-actions">
-                            <button class="btn btn-primary btn-full" onclick="nextStep()">
-                                Next
-                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
-                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div class="form-footer">
-                            Already have an account? <a href="#" onclick="switchToSignIn(event)">Sign In</a>
-                        </div>
-                    </div>
-
-                    <!-- Sign Up Step 2: Email & Password -->
-                    <div class="form-slide" data-form="signup" data-step="2">
-                        <h2 class="form-title">Account Details</h2>
-                        <p class="form-subtitle">Enter your email and create a password</p>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Email Address <span class="required">*</span></label>
-                            <input type="email" id="signup-email" class="form-input" placeholder="you@example.com" autocomplete="email" />
-                            <span class="form-error" id="error-signup-email"></span>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Password <span class="required">*</span></label>
-                            <input type="password" id="signup-password" class="form-input" placeholder="At least 6 characters" autocomplete="new-password" />
-                            <span class="form-error" id="error-signup-password"></span>
-                        </div>
-
-                        <div class="form-actions form-actions-dual">
-                            <button class="btn btn-ghost" onclick="prevStep()">Back</button>
-                            <button class="btn btn-primary" onclick="nextStep()">
-                                Next
-                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
-                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Sign Up Step 3: Confirm -->
-                    <div class="form-slide" data-form="signup" data-step="3">
-                        <h2 class="form-title">Confirm Your Details</h2>
-                        <p class="form-subtitle">Almost there! Confirm your password to finish</p>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Confirm Password <span class="required">*</span></label>
-                            <input type="password" id="signup-confirm-password" class="form-input" placeholder="Re-enter your password" autocomplete="new-password" />
-                            <span class="form-error" id="error-signup-confirm-password"></span>
-                        </div>
-
-                        <div class="form-group form-group-checkbox">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="signup-terms" />
-                                <span class="checkbox-custom"></span>
-                                I agree to the Terms of Service
-                            </label>
-                            <span class="form-error" id="error-signup-terms"></span>
-                        </div>
-
-                        <div class="form-actions form-actions-dual">
-                            <button class="btn btn-ghost" onclick="prevStep()">Back</button>
-                            <button class="btn btn-primary" onclick="submitSignUp()">
-                                Submit
-                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
-                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Sign In Form (single step) -->
-                    <div class="form-slide" data-form="signin" data-step="1">
-                        <h2 class="form-title">Welcome Back</h2>
-                        <p class="form-subtitle">Sign in to continue chatting</p>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Email Address <span class="required">*</span></label>
-                            <input type="email" id="signin-email" class="form-input" placeholder="you@example.com" autocomplete="email" />
-                            <span class="form-error" id="error-signin-email"></span>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Password <span class="required">*</span></label>
-                            <input type="password" id="signin-password" class="form-input" placeholder="Enter your password" autocomplete="current-password" />
-                            <span class="form-error" id="error-signin-password"></span>
-                        </div>
-
-                        <div class="form-link">
-                            <a href="#">Forgot Password?</a>
-                        </div>
-
-                        <div class="form-actions">
-                            <button class="btn btn-primary btn-full" onclick="submitSignIn()">
-                                Sign In
-                                <svg viewBox="0 0 24 24" class="btn-icon" width="18" height="18">
-                                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div class="form-footer">
-                            Don't have an account? <a href="#" onclick="switchToSignUp(event)">Sign Up</a>
-                        </div>
-                    </div>
-                </div>
+            <!-- Form Actions -->
+            <div class="scheme-form-actions">
+                <button class="btn btn-cta btn-full" id="sf-submit-btn" onclick="submitSchemeForm()"
+                    data-i18n="sf_submit_btn">
+                    Submit Profile & Start Chat
+                </button>
             </div>
 
             <!-- Loading State -->
+            <div id="scheme-form-loading" class="form-loading hidden">
+                <div class="spinner"></div>
+                <p data-i18n="sf_loading">Setting up your profile...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Sign In only) -->
+    <div id="auth-modal" class="modal-overlay hidden" onclick="handleOverlayClick(event)">
+        <div class="modal-container" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeAuthModal()">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+            </button>
+
+            <div id="auth-prompt-message" class="auth-prompt-message hidden" data-i18n="auth-prompt-message">
+                Sign in or create an account to continue chatting
+            </div>
+
+            <div class="form-slide">
+                <h2 class="form-title" data-i18n="signin-title">Welcome Back</h2>
+                <p class="form-subtitle" data-i18n="signin-subtitle">Sign in to continue chatting</p>
+
+                <div class="form-group">
+                    <label class="form-label" data-i18n="signin-email">Email Address <span
+                            class="required">*</span></label>
+                    <input type="email" id="signin-email" class="form-input" placeholder="you@example.com"
+                        autocomplete="email" />
+                    <span class="form-error" id="error-signin-email"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password <span class="required">*</span></label>
+                    <input type="password" id="signin-password" class="form-input" placeholder="Enter your password"
+                        autocomplete="current-password" />
+                    <span class="form-error" id="error-signin-password"></span>
+                </div>
+
+                <div class="form-link">
+                    <a href="#" data-i18n="forgot-password">Forgot Password?</a>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary btn-full" onclick="submitSignIn()" data-i18n="signin-btn">
+                        Sign In →
+                    </button>
+                </div>
+
+                <div class="form-footer">
+                    Don't have an account? <a href="#" onclick="switchToSchemeFinderFromAuth(event)"
+                        data-i18n="signup-link">Sign Up</a>
+                </div>
+            </div>
+
             <div id="form-loading" class="form-loading hidden">
                 <div class="spinner"></div>
-                <p>Processing...</p>
+                <p data-i18n="signin-loading">Signing in...</p>
             </div>
         </div>
     </div>

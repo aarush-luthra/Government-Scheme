@@ -7,7 +7,7 @@ from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
 from backend.database import (
     save_message, get_session_messages, count_bot_responses,
-    get_message_summary, get_session
+    get_message_summary, get_session, save_user_profile
 )
 from backend.auth import (
     register_user, login_user, create_user_session,
@@ -121,9 +121,27 @@ class SessionInfo(BaseModel):
     is_logged_in: bool
 
 
+class ProfileRequest(BaseModel):
+    """Scheme Finder form data"""
+    name: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    state: Optional[str] = None
+    area: Optional[str] = None
+    category: Optional[str] = None
+    is_disabled: Optional[bool] = False
+    is_minority: Optional[bool] = False
+    is_student: Optional[bool] = False
+    employment_status: Optional[str] = None
+    is_govt_employee: Optional[bool] = False
+    annual_income: Optional[float] = None
+    family_income: Optional[float] = None
+
+
 # Max bot responses before auth wall for anonymous users
 MAX_ANONYMOUS_RESPONSES = 3
-
 
 
 @app.get("/")
@@ -277,6 +295,80 @@ async def get_current_user(response: Response, session_id: Optional[str] = Cooki
     return SessionInfo(**session_info)
 
 
+@app.post("/profile")
+async def save_profile(
+    req: ProfileRequest,
+    response: Response,
+    session_id: Optional[str] = Cookie(None)
+):
+    """
+    Save user profile from Scheme Finder form.
+    Optionally creates a user account if email/password are provided.
+    """
+    from backend.auth import hash_password
+    
+    try:
+        # Ensure we have a session
+        if not session_id:
+            session_id = create_user_session()
+            response.set_cookie(
+                key="session_id",
+                value=session_id,
+                httponly=True,
+                max_age=60 * 60 * 24 * 30,
+                samesite="lax"
+            )
+        
+        # Build profile data
+        profile_data = {
+            'name': req.name,
+            'email': req.email,
+            'password_hash': hash_password(req.password) if req.password else None,
+            'gender': req.gender,
+            'age': req.age,
+            'state': req.state,
+            'area': req.area,
+            'category': req.category,
+            'is_disabled': req.is_disabled,
+            'is_minority': req.is_minority,
+            'is_student': req.is_student,
+            'employment_status': req.employment_status,
+            'is_govt_employee': req.is_govt_employee,
+            'annual_income': req.annual_income,
+            'family_income': req.family_income
+        }
+        
+        # Save profile
+        profile_id = save_user_profile(session_id, profile_data)
+        
+        # Log the inserted data to terminal
+        print("\n\n" + "="*50)
+        print(f"NEW USER PROFILE SAVED (ID: {profile_id})")
+        print("="*50)
+        for key, value in profile_data.items():
+            if key != 'password_hash':  # Don't print sensitive data
+                print(f"{key.ljust(20)}: {value}")
+        print("="*50 + "\n\n")
+
+        # If email and password provided, also create user account
+        user_id = None
+        if req.email and req.password and req.name:
+            success, message, user_id = register_user(req.name, req.email, req.password)
+            if success and user_id:
+                link_session_to_user(session_id, user_id)
+        
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "user_id": user_id,
+            "message": "Profile saved successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Profile save error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save profile")
+
+
 @app.get("/languages", response_model=List[LanguageInfo])
 async def get_supported_languages():
     """Get list of all supported languages"""
@@ -338,36 +430,37 @@ async def translate_text(req: TranslateRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Translation error: {e}")
+        logger.error(f"Translation error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Translation failed")
 
 
 @app.post("/translate/batch")
 async def batch_translate(req: BatchTranslateRequest):
-    """
-    Translate multiple texts at once
-    
-    - **texts**: List of texts to translate
-    - **source_lang**: Source language code (optional)
-    - **target_lang**: Target language code
-    """
     try:
+        # 1. Validation
+        if req.target_lang not in translator.SUPPORTED_LANGUAGES:
+            raise HTTPException(status_code=400, detail=f"Unsupported target language: {req.target_lang}")
+
+        # 2. Call the optimized batch function
+        # Note: We do NOT force source_lang to 'en_XX' here. 
+        # We pass None if it's missing, letting the Translator class detect it.
         translations = translator.batch_translate(
             req.texts,
-            source_lang=req.source_lang,
+            source_lang=req.source_lang, 
             target_lang=req.target_lang
         )
         
         return {
             "translations": translations,
-            "count": len(translations),
-            "source_lang": req.source_lang,
+            "source_lang": req.source_lang or "auto",
             "target_lang": req.target_lang
         }
         
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Batch translation error: {e}")
-        raise HTTPException(status_code=500, detail="Batch translation failed")
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Translation failed")
 
 
 @app.post("/chat")
@@ -573,4 +666,4 @@ async def translator_health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
