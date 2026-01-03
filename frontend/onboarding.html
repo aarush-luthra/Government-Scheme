@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find My Benefits - Government Scheme Assistant</title>
+    <meta name="description" content="Find government schemes tailored for you. Get personalized recommendations for Indian government welfare programs.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="stylesheet" href="/static/onboarding.css" />
+</head>
+
+<body>
+    <div class="onboarding-container">
+        <!-- Left Panel - Branding -->
+        <div class="onboarding-left">
+            <div class="brand-header">
+                <div class="brand-logo">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>
+                    </svg>
+                    <span>Find My Benefits</span>
+                </div>
+            </div>
+
+            <div class="brand-content">
+                <h1 class="brand-headline">
+                    Empowering Every Indian with the Right Government Information
+                </h1>
+                <p class="brand-description">
+                    Find government schemes tailored for you.<br>
+                    Fill in your details to receive personalized recommendations in your preferred language.
+                </p>
+
+                <ul class="feature-list">
+                    <li>
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Multi-language support
+                    </li>
+                    <li>
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Personalized scheme matching
+                    </li>
+                    <li>
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Direct official scheme links
+                    </li>
+                    <li>
+                        <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        24/7 AI assistance
+                    </li>
+                </ul>
+            </div>
+
+            <div class="brand-footer">
+                <p>Digital India Initiative - Serving Citizens</p>
+            </div>
+        </div>
+
+        <!-- Right Panel - Form -->
+        <div class="onboarding-right">
+            <div class="form-container">
+                <div class="form-header">
+                    <span class="step-indicator">Step 1 of 2</span>
+                    <h2>Create Your Profile</h2>
+                </div>
+
+                <form id="onboarding-form" autocomplete="off">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" name="fullName" placeholder="Enter your name">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="age">Age</label>
+                            <input type="number" id="age" name="age" min="1" max="120" placeholder="Your age">
+                        </div>
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <select id="gender" name="gender">
+                                <option value="">Select</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                                <option value="prefer_not_to_say">Prefer not to say</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="state">State</label>
+                        <select id="state" name="state">
+                            <option value="">Select your state</option>
+                            <option value="andhra_pradesh">Andhra Pradesh</option>
+                            <option value="arunachal_pradesh">Arunachal Pradesh</option>
+                            <option value="assam">Assam</option>
+                            <option value="bihar">Bihar</option>
+                            <option value="chhattisgarh">Chhattisgarh</option>
+                            <option value="goa">Goa</option>
+                            <option value="gujarat">Gujarat</option>
+                            <option value="haryana">Haryana</option>
+                            <option value="himachal_pradesh">Himachal Pradesh</option>
+                            <option value="jharkhand">Jharkhand</option>
+                            <option value="karnataka">Karnataka</option>
+                            <option value="kerala">Kerala</option>
+                            <option value="madhya_pradesh">Madhya Pradesh</option>
+                            <option value="maharashtra">Maharashtra</option>
+                            <option value="manipur">Manipur</option>
+                            <option value="meghalaya">Meghalaya</option>
+                            <option value="mizoram">Mizoram</option>
+                            <option value="nagaland">Nagaland</option>
+                            <option value="odisha">Odisha</option>
+                            <option value="punjab">Punjab</option>
+                            <option value="rajasthan">Rajasthan</option>
+                            <option value="sikkim">Sikkim</option>
+                            <option value="tamil_nadu">Tamil Nadu</option>
+                            <option value="telangana">Telangana</option>
+                            <option value="tripura">Tripura</option>
+                            <option value="uttar_pradesh">Uttar Pradesh</option>
+                            <option value="uttarakhand">Uttarakhand</option>
+                            <option value="west_bengal">West Bengal</option>
+                            <option value="delhi">Delhi</option>
+                            <option value="jammu_kashmir">Jammu & Kashmir</option>
+                            <option value="ladakh">Ladakh</option>
+                            <option value="puducherry">Puducherry</option>
+                            <option value="chandigarh">Chandigarh</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="category">Social Category</label>
+                            <select id="category" name="category">
+                                <option value="">Select</option>
+                                <option value="general">General</option>
+                                <option value="sc">SC</option>
+                                <option value="st">ST</option>
+                                <option value="obc">OBC</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="income">Annual Income</label>
+                            <input type="number" id="income" name="income" min="0" placeholder="In Rupees">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="occupation">Occupation</label>
+                        <select id="occupation" name="occupation">
+                            <option value="">Select your occupation</option>
+                            <option value="farmer">Farmer</option>
+                            <option value="student">Student</option>
+                            <option value="worker">Worker</option>
+                            <option value="homemaker">Homemaker</option>
+                            <option value="self_employed">Self Employed</option>
+                            <option value="government_employee">Government Employee</option>
+                            <option value="private_employee">Private Employee</option>
+                            <option value="unemployed">Unemployed</option>
+                            <option value="retired">Retired</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="language">Preferred Language <span class="required">*</span></label>
+                        <select id="language" name="language" required>
+                            <option value="">Select language</option>
+                            <option value="en" selected>English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="te">Telugu</option>
+                            <option value="ta">Tamil</option>
+                            <option value="kn">Kannada</option>
+                            <option value="ml">Malayalam</option>
+                            <option value="mr">Marathi</option>
+                            <option value="bn">Bengali</option>
+                            <option value="gu">Gujarati</option>
+                            <option value="pa">Punjabi</option>
+                            <option value="or">Odia</option>
+                            <option value="as">Assamese</option>
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">
+                            Start Chat Assistant
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </button>
+                        <a href="#" id="skip-link" class="skip-link">Skip for now</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script src="/static/onboarding.js"></script>
+</body>
+
+</html>

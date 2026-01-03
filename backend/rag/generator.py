@@ -18,8 +18,15 @@ Guidelines:
 
 from typing import List, Dict, Optional
 
-def generate_answer(user_question: str, context: str, history: Optional[List[Dict[str, str]]] = None) -> str:
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+def generate_answer(user_question: str, context: str, history: Optional[List[Dict[str, str]]] = None, user_profile: Optional[Dict] = None) -> str:
+    # Build system prompt with user profile context if available
+    system_content = SYSTEM_PROMPT
+    if user_profile:
+        profile_context = build_profile_context(user_profile)
+        if profile_context:
+            system_content += f"\n\nUser Profile Information:\n{profile_context}\n\nUse this profile information to provide personalized scheme recommendations. When the user asks about themselves or relevant schemes, refer to this profile data."
+    
+    messages = [{"role": "system", "content": system_content}]
     
     # Add history if available
     if history:
@@ -49,3 +56,32 @@ User Question:
     )
 
     return response.choices[0].message.content.strip()
+
+
+def build_profile_context(profile: Dict) -> str:
+    """Build a human-readable profile context string."""
+    parts = []
+    
+    if profile.get("fullName"):
+        parts.append(f"- Name: {profile['fullName']}")
+    if profile.get("age"):
+        parts.append(f"- Age: {profile['age']} years")
+    if profile.get("gender"):
+        gender_map = {"male": "Male", "female": "Female", "other": "Other"}
+        parts.append(f"- Gender: {gender_map.get(profile['gender'], profile['gender'])}")
+    if profile.get("state"):
+        state_name = profile['state'].replace('_', ' ').title()
+        parts.append(f"- State: {state_name}")
+    if profile.get("category"):
+        category_map = {"general": "General", "sc": "SC (Scheduled Caste)", "st": "ST (Scheduled Tribe)", "obc": "OBC (Other Backward Class)"}
+        parts.append(f"- Social Category: {category_map.get(profile['category'], profile['category'])}")
+    if profile.get("income"):
+        parts.append(f"- Annual Income: Rs. {profile['income']:,}")
+    if profile.get("occupation"):
+        occupation_name = profile['occupation'].replace('_', ' ').title()
+        parts.append(f"- Occupation: {occupation_name}")
+    if profile.get("language"):
+        lang_map = {"en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "kn": "Kannada", "ml": "Malayalam", "mr": "Marathi", "bn": "Bengali", "gu": "Gujarati", "pa": "Punjabi", "or": "Odia", "as": "Assamese"}
+        parts.append(f"- Preferred Language: {lang_map.get(profile['language'], profile['language'])}")
+    
+    return "\n".join(parts)

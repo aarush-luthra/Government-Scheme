@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
@@ -54,6 +54,7 @@ class ChatRequest(BaseModel):
     source_lang: Optional[str] = Field(None, description="Source language code (auto-detect if null)")
     target_lang: Optional[str] = Field(None, description="Preferred response language. If null, defaults to source language.")
     history: Optional[List[Dict[str, str]]] = Field(default=[], description="Chat history (list of role/content dicts)")
+    user_profile: Optional[Dict[str, Any]] = Field(default=None, description="User profile data for personalization")
 
 
 class ChatResponse(BaseModel):
@@ -93,6 +94,12 @@ class LanguageInfo(BaseModel):
 async def serve_frontend():
     """Serve the frontend index.html"""
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+
+@app.get("/onboarding")
+async def serve_onboarding():
+    """Serve the onboarding page for new users"""
+    return FileResponse(os.path.join(FRONTEND_DIR, "onboarding.html"))
 
 
 @app.get("/health")
@@ -248,7 +255,8 @@ async def chat(req: ChatRequest):
         reply = generate_answer(
             user_question=english_message,
             context=context,
-            history=req.history
+            history=req.history,
+            user_profile=req.user_profile
         )
         
         # Step 5: Translate response if needed

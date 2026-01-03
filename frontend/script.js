@@ -1,3 +1,24 @@
+// Check for user profile on load
+document.addEventListener('DOMContentLoaded', function () {
+    const profile = localStorage.getItem('userProfile');
+    if (!profile) {
+        // No profile found, redirect to onboarding
+        window.location.href = '/onboarding';
+        return;
+    }
+});
+
+// Get user profile for API calls
+function getUserProfile() {
+    try {
+        const profile = localStorage.getItem('userProfile');
+        return profile ? JSON.parse(profile) : null;
+    } catch (error) {
+        console.error('Failed to read profile:', error);
+        return null;
+    }
+}
+
 // Store chat history
 let chatHistory = [];
 
@@ -19,6 +40,7 @@ async function sendMessage() {
     input.value = "";
 
     try {
+        const userProfile = getUserProfile();
         const response = await fetch("/chat", {
             method: "POST",
             headers: {
@@ -26,7 +48,8 @@ async function sendMessage() {
             },
             body: JSON.stringify({
                 message: message,
-                history: chatHistory
+                history: chatHistory,
+                user_profile: userProfile
             })
         });
 
