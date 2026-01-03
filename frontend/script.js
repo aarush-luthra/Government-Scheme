@@ -186,7 +186,7 @@ function selectLanguage(langCode, source) {
 }
 
 async function translatePage(targetLang) {
-if (targetLang === 'en_XX') {
+    if (targetLang === 'en_XX') {
         // Restore Text
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.dataset.i18n;
@@ -307,7 +307,7 @@ function updateAgeDropdown(langCode) {
     // 3. Clear existing options (EXCEPT the first "Select age" placeholder)
     // We assume the first option is the placeholder
     const placeholderOption = select.options[0];
-    select.innerHTML = ''; 
+    select.innerHTML = '';
     select.appendChild(placeholderOption);
 
     // 4. Create the Number Formatter for the chosen language
@@ -577,6 +577,12 @@ function switchToSchemeFinderFromAuth(event) {
     openSchemeFinderModal();
 }
 
+function switchToSignInFromScheme(event) {
+    event.preventDefault();
+    closeSchemeFinderModal();
+    openAuthModal('signin');
+}
+
 // ============ Validation ============
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -644,6 +650,7 @@ async function submitSignIn() {
             if (inputWrapper) {
                 inputWrapper.classList.remove('disabled');
             }
+            startChat();
         } else {
             showError('signin-password', data.message);
         }

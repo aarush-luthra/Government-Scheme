@@ -220,7 +220,15 @@
 
                     <!-- Section 1: Account -->
                     <div class="form-section">
-                        <h3 data-i18n="sf_h_account">Create your account</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <h3 data-i18n="sf_h_account">Create your account</h3>
+                            <div style="font-size: 0.9em;">
+                                <span data-i18n="sf_msg_have_account">Already have an account?</span>
+                                <a href="#" onclick="switchToSignInFromScheme(event)"
+                                    style="color: var(--primary); text-decoration: none; font-weight: 500;"
+                                    data-i18n="sf_link_signin">Sign In</a>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label class="form-label" data-i18n="sf_lbl_name">Full Name <span
                                     class="required">*</span></label>
@@ -265,7 +273,7 @@
                             <div class="age-input-row">
                                 <select id="sf-age" class="form-select">
                                     <option value="" data-i18n="sf_opt_sel_age">Select age</option>
-                                    </select>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -492,12 +500,11 @@
 
                 <div class="form-group">
                     <label class="form-label">
-                        <span data-i18n="auth_lbl_password">Password</span> 
+                        <span data-i18n="auth_lbl_password">Password</span>
                         <span class="required">*</span>
-                    </label>                   
-                    <input type="password" id="signin-password" class="form-input" 
-                        placeholder="Enter your password" data-i18n-placeholder="auth_pl_password"
-                        autocomplete="current-password" />
+                    </label>
+                    <input type="password" id="signin-password" class="form-input" placeholder="Enter your password"
+                        data-i18n-placeholder="auth_pl_password" autocomplete="current-password" />
                     <span class="form-error" id="error-signin-password"></span>
                 </div>
 
@@ -511,8 +518,8 @@
                     </button>
                 </div>
                 <div class="form-footer">
-                    <span data-i18n="auth_msg_no_account">Don't have an account?</span> 
-                    
+                    <span data-i18n="auth_msg_no_account">Don't have an account?</span>
+
                     <a href="#" onclick="switchToSchemeFinderFromAuth(event)" data-i18n="auth_link_signup">Sign Up</a>
                 </div>
             </div>
