@@ -302,28 +302,23 @@ async def save_profile(
     session_id: Optional[str] = Cookie(None)
 ):
     """
-    Save user profile from Scheme Finder form.
-    Optionally creates a user account if email/password are provided.
+    Save or Update user profile.
     """
     from backend.auth import hash_password
+    from backend.database import get_user_profile, save_user_profile, update_user_profile 
     
     try:
         # Ensure we have a session
         if not session_id:
             session_id = create_user_session()
             response.set_cookie(
-                key="session_id",
-                value=session_id,
-                httponly=True,
-                max_age=60 * 60 * 24 * 30,
-                samesite="lax"
+                key="session_id", value=session_id, httponly=True, max_age=60*60*24*30, samesite="lax"
             )
         
         # Build profile data
         profile_data = {
             'name': req.name,
             'email': req.email,
-            'password_hash': hash_password(req.password) if req.password else None,
             'gender': req.gender,
             'age': req.age,
             'state': req.state,
@@ -337,36 +332,153 @@ async def save_profile(
             'annual_income': req.annual_income,
             'family_income': req.family_income
         }
-        
-        # Save profile
-        profile_id = save_user_profile(session_id, profile_data)
-        
-        # Log the inserted data to terminal
-        print("\n\n" + "="*50)
-        print(f"NEW USER PROFILE SAVED (ID: {profile_id})")
-        print("="*50)
-        for key, value in profile_data.items():
-            if key != 'password_hash':  # Don't print sensitive data
-                print(f"{key.ljust(20)}: {value}")
-        print("="*50 + "\n\n")
 
-        # If email and password provided, also create user account
-        user_id = None
-        if req.email and req.password and req.name:
-            success, message, user_id = register_user(req.name, req.email, req.password)
-            if success and user_id:
-                link_session_to_user(session_id, user_id)
+        # Handle Password (only hash if provided)
+        if req.password:
+            profile_data['password_hash'] = hash_password(req.password)
+        else:
+            profile_data['password_hash'] = None
+
+        # CHECK: Does profile exist?
+        existing_profile = get_user_profile(session_id)
         
+        # Get user_id from session if logged in
+        session = get_session(session_id)
+        user_id = session.get('user_id') if session else None
+
+        if existing_profile:
+            # UPDATE
+            success = update_user_profile(session_id, profile_data)
+            profile_id = existing_profile.get('id') # Keep existing ID
+            msg = "Profile updated successfully"
+        else:
+            # INSERT - pass user_id to save function
+            profile_id = save_user_profile(session_id, profile_data, user_id)
+            msg = "Profile saved successfully"
+            
+            # If email provided on creation, try to register/link user
+            if req.email and req.password and req.name and not user_id:
+                success_reg, _, new_user_id = register_user(req.name, req.email, req.password)
+                if success_reg and new_user_id:
+                    link_session_to_user(session_id, new_user_id)
+                    user_id = new_user_id
+                    print("\n\n" + "="*50)
+
+            print(f"NEW USER PROFILE SAVED (ID: {profile_id})")
+
+            print("="*50)
+
+            for key, value in profile_data.items():
+
+                if key != 'password_hash':  # Don't print sensitive data
+
+                    print(f"{key.ljust(20)}: {value}")
+
+            print("="*50 + "\n\n")
+
         return {
             "success": True,
             "profile_id": profile_id,
-            "user_id": user_id,
-            "message": "Profile saved successfully"
+            "message": msg
         }
         
     except Exception as e:
         logger.error(f"Profile save error: {e}")
         raise HTTPException(status_code=500, detail="Failed to save profile")
+
+
+@app.get("/profile")
+async def get_profile(session_id: Optional[str] = Cookie(None)):
+    """
+    Get the latest profile for the current session.
+    """
+    from backend.database import get_user_profile, get_user_profile_by_user_id, get_session
+    
+    if not session_id:
+        return {}
+    
+    # Check if user is logged in (session has user_id)
+    session = get_session(session_id)
+    if session and session.get('user_id'):
+        # Fetch by user_id (persists across sessions)
+        profile = get_user_profile_by_user_id(session['user_id'])
+    else:
+        # Fallback to session_id (for anonymous users)
+        profile = get_user_profile(session_id)
+    
+    if not profile:
+        return {}
+        
+    # Remove sensitive data
+    if 'password_hash' in profile:
+        del profile['password_hash']
+        
+    return profile
+
+
+@app.get("/edit")
+async def get_edit_profile(session_id: Optional[str] = Cookie(None)):
+    """
+    Get profile data specifically for the edit page. 
+    This is an alias for /profile but distinct for logging.
+    """
+    return await get_profile(session_id)
+
+
+@app.post("/edit")
+async def edit_profile(
+    req: ProfileRequest,
+    response: Response,
+    session_id: Optional[str] = Cookie(None)
+):
+    """
+    Update user profile from Edit Profile form.
+    """
+    from backend.auth import hash_password
+    from backend.database import get_user_profile, save_user_profile, update_user_profile 
+    
+    try:
+        if not session_id:
+            raise HTTPException(status_code=401, detail="Session required")
+
+        # Build profile data
+        profile_data = {
+            'name': req.name,
+            'email': req.email,
+            'gender': req.gender,
+            'age': req.age,
+            'state': req.state,
+            'area': req.area,
+            'category': req.category,
+            'is_disabled': req.is_disabled,
+            'is_minority': req.is_minority,
+            'is_student': req.is_student,
+            'employment_status': req.employment_status,
+            'is_govt_employee': req.is_govt_employee,
+            'annual_income': req.annual_income,
+            'family_income': req.family_income
+        }
+
+        # Handle Password (only hash if provided)
+        if req.password:
+            profile_data['password_hash'] = hash_password(req.password)
+        else:
+            profile_data['password_hash'] = None
+
+        # Always Update in Edit Mode
+        success = update_user_profile(session_id, profile_data)
+        
+        # Log to terminal
+        print(f"\n[EDIT PROFILE] Profile updated for session: {session_id}")
+
+        return {
+            "success": True,
+            "message": "Profile updated successfully (via /edit)"
+        }
+        
+    except Exception as e:
+        logger.error(f"Edit profile error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update profile")
 
 
 @app.get("/languages", response_model=List[LanguageInfo])
