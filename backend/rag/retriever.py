@@ -13,7 +13,10 @@ class VectorStoreRetriever:
             collection_name="government_schemes"
         )
 
-        print("✅ VectorStoreRetriever initialized")
+        if self.vectorstore is not None:
+            print("VectorStoreRetriever initialized")
+        else:
+            print("VectorStoreRetriever initialization failed")
 
     def search(self, query: str, k: int = 4):
         return self.vectorstore.similarity_search(query, k=k)
