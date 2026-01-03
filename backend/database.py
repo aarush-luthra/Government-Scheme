@@ -64,6 +64,7 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_profiles (
             profile_id TEXT PRIMARY KEY,
+            user_id TEXT,
             session_id TEXT NOT NULL,
             name TEXT,
             email TEXT,
@@ -81,6 +82,7 @@ def init_db():
             annual_income REAL,
             family_income REAL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (user_id),
             FOREIGN KEY (session_id) REFERENCES sessions (session_id)
         )
     """)
@@ -105,6 +107,41 @@ def create_user(name: str, email: str, password_hash: str) -> str:
     conn.commit()
     conn.close()
     return user_id
+    
+
+def update_user_profile(session_id: str, profile_data: Dict[str, Any]) -> bool:
+    """Update an existing user profile."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Filter out None values or keys you don't want to overwrite (like password if empty)
+    fields = []
+    values = []
+    
+    for key, value in profile_data.items():
+        # Only update password if a new one is provided (not None)
+        if key == 'password_hash' and value is None:
+            continue
+        
+        fields.append(f"{key} = ?")
+        values.append(value)
+            
+    if not fields:
+        conn.close()
+        return False
+        
+    values.append(session_id) # For the WHERE clause
+    
+    try:
+        query = f"UPDATE user_profiles SET {', '.join(fields)} WHERE session_id = ?"
+        cursor.execute(query, values)
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Update error: {e}")
+        return False
+    finally:
+        conn.close()
 
 
 def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
@@ -254,7 +291,7 @@ def get_message_summary(session_id: str, limit: int = 5) -> str:
 
 # ============ Profile Operations ============
 
-def save_user_profile(session_id: str, profile_data: Dict[str, Any]) -> str:
+def save_user_profile(session_id: str, profile_data: Dict[str, Any], user_id: Optional[str] = None) -> str:
     """Save user profile from Scheme Finder form."""
     profile_id = str(uuid.uuid4())
     conn = get_db_connection()
@@ -262,14 +299,15 @@ def save_user_profile(session_id: str, profile_data: Dict[str, Any]) -> str:
     
     cursor.execute("""
         INSERT INTO user_profiles (
-            profile_id, session_id, name, email, password_hash,
+            profile_id, user_id, session_id, name, email, password_hash,
             gender, age, state, area, category,
             is_disabled, is_minority, is_student,
             employment_status, is_govt_employee,
             annual_income, family_income
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         profile_id,
+        user_id,  # Add user_id
         session_id,
         profile_data.get('name'),
         profile_data.get('email'),
@@ -301,6 +339,21 @@ def get_user_profile(session_id: str) -> Optional[Dict[str, Any]]:
     cursor.execute(
         "SELECT * FROM user_profiles WHERE session_id = ? ORDER BY created_at DESC LIMIT 1",
         (session_id,)
+    )
+    row = cursor.fetchone()
+    
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_user_profile_by_user_id(user_id: str) -> Optional[Dict[str, Any]]:
+    """Get user profile by user_id (persists across sessions)."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT * FROM user_profiles WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+        (user_id,)
     )
     row = cursor.fetchone()
     

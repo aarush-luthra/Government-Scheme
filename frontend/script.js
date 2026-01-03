@@ -331,9 +331,82 @@ function startChat() {
 }
 
 // ============ Scheme Finder Modal ============
-function openSchemeFinderModal() {
-    resetSchemeFormData();
-    document.getElementById('scheme-finder-modal').classList.remove('hidden');
+async function openSchemeFinderModal(mode = 'signup') {
+    const modal = document.getElementById('scheme-finder-modal');
+
+    // 1. Get the Correct Elements
+    const title = modal.querySelector('.modal-title');
+
+    // FIX: Changed 'btn-submit-profile' to 'sf-submit-btn'
+    const submitBtn = document.getElementById('sf-submit-btn');
+
+    // Debugging: Check if elements exist
+    if (!submitBtn) {
+        console.error("CRITICAL ERROR: 'sf-submit-btn' not found in DOM");
+        return;
+    }
+
+    resetSchemeFinderUI();
+
+    if (mode === 'edit') {
+        // --- EDIT MODE LOGIC ---
+
+        // Hide Auth Header (The "Create Account" text)
+        const createAccountHeader = modal.querySelector('h3[data-i18n="sf_h_account"]');
+        if (createAccountHeader) {
+            const authContainer = createAccountHeader.closest('.form-section');
+            if (authContainer) authContainer.style.display = 'none';
+        }
+
+        // Change Title
+        if (currentUser && currentUser.name) {
+            title.textContent = `Edit Profile: ${currentUser.name}`;
+            title.removeAttribute('data-i18n');
+        } else {
+            title.textContent = "Edit Your Profile";
+        }
+
+        // Change Button Text & Action
+        // Use innerHTML to preserve any potential spans/icons
+        submitBtn.innerHTML = "<span>Edit Profile & Continue Chat</span>";
+        submitBtn.onclick = submitEditProfile; // Re-bind to the edit function
+
+        // Fetch Data
+        try {
+            const response = await fetch('/edit');
+            const profile = await response.json();
+            if (profile && Object.keys(profile).length > 0) {
+                populateSchemeForm(profile);
+            }
+        } catch (e) {
+            console.error("Failed to load profile", e);
+        }
+
+    } else {
+        // --- SIGNUP MODE LOGIC ---
+
+        // Show Auth Header
+        const createAccountHeader = modal.querySelector('h3[data-i18n="sf_h_account"]');
+        if (createAccountHeader) {
+            const authContainer = createAccountHeader.closest('.form-section');
+            if (authContainer) authContainer.style.display = 'block';
+        }
+
+        // Reset Title
+        title.setAttribute('data-i18n', 'sf_modal_title');
+        title.textContent = "Help us find the best schemes for you";
+
+        // Reset Button
+        submitBtn.innerHTML = "<span data-i18n='sf_btn_submit'>Submit Profile & Start Chat</span>";
+        submitBtn.onclick = submitSchemeForm; // Re-bind to original function
+
+        // Re-apply translation if needed
+        if (typeof translatePage === 'function' && currentLanguage) {
+            translatePage(currentLanguage);
+        }
+    }
+
+    modal.classList.remove('hidden');
 }
 
 function closeSchemeFinderModal() {
@@ -377,57 +450,251 @@ function resetSchemeFormData() {
 
 
 
+// ============ Edit Profile ============
+
+function populateSchemeForm(data) {
+    console.log('[POPULATE FORM] Received data:', data);
+
+    // 1. Text Inputs
+    if (data.name) document.getElementById('sf-name').value = data.name;
+    // We skip email/password in edit mode usually, or you can populate email:
+    if (data.email) document.getElementById('sf-email').value = data.email;
+
+    if (data.age) document.getElementById('sf-age').value = data.age;
+    if (data.state) document.getElementById('sf-state').value = data.state;
+    if (data.annual_income) document.getElementById('sf-annual-income').value = data.annual_income;
+    if (data.family_income) document.getElementById('sf-family-income').value = data.family_income;
+
+    // 2. Update Global State - IMPORTANT: Populate ALL fields from database
+    schemeFormData.name = data.name || schemeFormData.name;
+    schemeFormData.email = data.email || schemeFormData.email;
+    schemeFormData.gender = data.gender || schemeFormData.gender;
+    schemeFormData.age = data.age || schemeFormData.age;
+    schemeFormData.state = data.state || schemeFormData.state;
+    schemeFormData.area = data.area || schemeFormData.area;
+    schemeFormData.category = data.category || schemeFormData.category;
+    schemeFormData.is_disabled = data.is_disabled !== undefined ? data.is_disabled : schemeFormData.is_disabled;
+    schemeFormData.is_minority = data.is_minority !== undefined ? data.is_minority : schemeFormData.is_minority;
+    schemeFormData.is_student = data.is_student !== undefined ? data.is_student : schemeFormData.is_student;
+    schemeFormData.employment_status = data.employment_status || schemeFormData.employment_status;
+    schemeFormData.is_govt_employee = data.is_govt_employee !== undefined ? data.is_govt_employee : schemeFormData.is_govt_employee;
+    schemeFormData.annual_income = data.annual_income || schemeFormData.annual_income;
+    schemeFormData.family_income = data.family_income || schemeFormData.family_income;
+
+    // 3. Visually Select Cards (Gender, Category, etc.)
+    highlightSelection('gender-selection', data.gender);
+    highlightSelection('category-selection', data.category);
+    highlightSelection('employment-selection', data.employment_status);
+
+    // 4. Visually Select Toggles (Area, Boolean types)
+    highlightToggle('area-selection', data.area);
+    highlightToggle('disability-selection', data.is_disabled);
+    highlightToggle('minority-selection', data.is_minority);
+    highlightToggle('student-selection', data.is_student);
+    highlightToggle('govt-employee-selection', data.is_govt_employee);
+
+    console.log('[POPULATE FORM] Form populated successfully');
+}
+// Helper: Highlights standard selection cards
+function highlightSelection(containerId, value) {
+    if (!value) return;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Remove existing selection
+    container.querySelectorAll('.selection-card, .category-card').forEach(c => c.classList.remove('selected'));
+
+    // Find new target
+    const target = container.querySelector(`[data-value="${value}"]`);
+    if (target) target.classList.add('selected');
+}
+
+// Helper: Highlights toggle buttons (Handles 'yes'/'no' and 'urban'/'rural')
+function highlightToggle(containerId, value) {
+    if (value === null || value === undefined) return;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Convert boolean to string if needed (for data-value="yes"/"no")
+    let stringVal = value;
+    if (typeof value === 'boolean') {
+        stringVal = value ? 'yes' : 'no';
+    } else if (value === 1) {
+        stringVal = 'yes';
+    } else if (value === 0) {
+        stringVal = 'no';
+    }
+
+    container.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('selected'));
+
+    const target = container.querySelector(`[data-value="${stringVal}"]`);
+    if (target) target.classList.add('selected');
+}
+
+function selectOptionByValue(fieldName, value) {
+    if (!value) return;
+    const cards = document.querySelectorAll(`.selection-card[onclick*="'${fieldName}'"]`);
+    cards.forEach(card => {
+        // extract value from onclick="selectCard(this, 'start_business')" -> 'start_business'
+        // Actually the HTML is onclick="selectGender(this)" data-value="Male"
+        // We need to find the card with data-value == value
+        if (card.dataset.value === value) {
+            if (fieldName === 'gender') selectGender(card);
+            else if (fieldName === 'area') selectArea(card);
+            else if (fieldName === 'category') selectCategory(card);
+            else if (fieldName === 'employment_status') selectEmployment(card);
+        }
+    });
+}
+
+function selectBooleanOption(fieldName, value) {
+    // value is 0 or 1 (or true/false). Logic expects 1/0? 
+    // HTML: onclick="selectBoolean(this, 'is_disabled', 1)"
+    const val = (value === true || value === 1 || value === '1') ? 1 : 0;
+    const cards = document.querySelectorAll(`.selection-card[onclick*="'${fieldName}'"]`);
+    cards.forEach(card => {
+        // Check the 3rd argument of onclick, or simpler: check the text/structure? 
+        // The onclick string is: selectBoolean(this, 'is_disabled', 1)
+        if (card.getAttribute('onclick').includes(`, ${val})`)) {
+            selectBoolean(card, fieldName, val);
+        }
+    });
+}
+
+async function submitEditProfile() {
+    if (!validateFullForm()) return;
+    collectFullFormData();
+
+    const loading = document.getElementById('scheme-form-loading');
+    if (loading) loading.classList.remove('hidden');
+
+    try {
+        const response = await fetch('/edit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(schemeFormData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update UI with new name if changed?
+            if (schemeFormData.name) {
+                const currentUserDisplay = document.getElementById('user-name-display');
+                if (currentUserDisplay) currentUserDisplay.textContent = `Hello, ${schemeFormData.name}`;
+                currentUser.name = schemeFormData.name;
+            }
+            // Silently close modal - no alert popup
+            closeSchemeFinderModal();
+        } else {
+            alert(data.message || 'Failed to update profile');
+        }
+    } catch (error) {
+        console.error('Profile update error:', error);
+        alert('An error occurred. Please try again.');
+    } finally {
+        if (loading) loading.classList.add('hidden');
+    }
+}
+
+function resetSchemeFinderUI() {
+    // revert changes made by openEditProfileModal for normal "Sign Up" flow
+    const modal = document.getElementById('scheme-finder-modal');
+    const title = modal.querySelector('.modal-title');
+    const submitBtn = document.getElementById('sf-submit-btn');
+
+    // Show Auth Header
+    const createAccountHeader = modal.querySelector('h3[data-i18n="sf_h_account"]');
+    if (createAccountHeader) {
+        const authContainer = createAccountHeader.closest('.form-section');
+        if (authContainer) authContainer.style.display = 'block';
+    }
+
+    title.textContent = "Help us find the best schemes for you";
+    title.setAttribute('data-i18n', 'sf_modal_title');
+
+    // Use innerHTML to allow for potential child spans
+    submitBtn.innerHTML = "<span data-i18n='sf_btn_submit'>Submit Profile & Start Chat</span>";
+    submitBtn.onclick = submitSchemeForm;
+
+    // Clear form
+    // Clear form
+    // document.getElementById('sf-form').reset(); // Form element doesn't exist
+    // Or manually clear inputs...
+    // Or manually clear inputs...
+    document.querySelectorAll('#scheme-finder-modal input').forEach(i => i.value = '');
+    document.querySelectorAll('.selection-card.selected').forEach(c => c.classList.remove('selected'));
+
+    schemeFormData = {
+        gender: null,
+        age: null,
+        state: null,
+        area: null,
+        category: null,
+        is_disabled: null,
+        is_minority: null,
+        is_student: null,
+        employment_status: null,
+        is_govt_employee: null,
+        annual_income: null,
+        family_income: null
+    };
+}
+
 function validateFullForm() {
     const name = document.getElementById('sf-name').value.trim();
     const email = document.getElementById('sf-email').value.trim();
     const password = document.getElementById('sf-password').value;
 
-    if (!name || name.length < 2) {
-        alert('Please enter your name (at least 2 characters)');
-        return false;
+    // Check if we are in Edit Mode (Password field is hidden)
+    const createAccountHeader = document.querySelector('h3[data-i18n="sf_h_account"]');
+    const authContainer = createAccountHeader ? createAccountHeader.closest('.form-section') : null;
+    const isEditMode = authContainer && authContainer.style.display === 'none';
+
+    // Only validate Auth fields if NOT in edit mode
+    if (!isEditMode) {
+        if (!name || name.length < 2) {
+            alert('Please enter your name (at least 2 characters)');
+            return false;
+        }
+        if (!email || !isValidEmail(email)) {
+            alert('Please enter a valid email address');
+            return false;
+        }
+        if (!password || password.length < 6) {
+            alert('Password must be at least 6 characters');
+            return false;
+        }
     }
-    if (!email || !isValidEmail(email)) {
-        alert('Please enter a valid email address');
-        return false;
-    }
-    if (!password || password.length < 6) {
-        alert('Password must be at least 6 characters');
-        return false;
-    }
+
+    console.log('[VALIDATE] schemeFormData:', schemeFormData);
+
     if (!schemeFormData.gender) {
         alert('Please select your gender');
         return false;
     }
-    if (!document.getElementById('sf-age').value) {
-        alert('Please select your age');
+    // ... (Rest of validation remains the same)
+    if (!document.getElementById('sf-age').value) { alert('Please select your age'); return false; }
+    if (!schemeFormData.area) { alert('Please select your area'); return false; }
+    if (!schemeFormData.category) { alert('Please select your category'); return false; }
+
+    // Note: Accept 0, 1, true, false as valid - only reject null/undefined
+    if (schemeFormData.is_disabled === null || schemeFormData.is_disabled === undefined) {
+        alert('Please indicate disability status');
         return false;
     }
-    if (!schemeFormData.area) {
-        alert('Please select your area of residence');
+    if (schemeFormData.is_minority === null || schemeFormData.is_minority === undefined) {
+        alert('Please indicate minority status');
         return false;
     }
-    if (!schemeFormData.category) {
-        alert('Please select your category');
+    if (schemeFormData.is_student === null || schemeFormData.is_student === undefined) {
+        alert('Please indicate student status');
         return false;
     }
-    if (schemeFormData.is_disabled === null) {
-        alert('Please indicate if you have a disability');
-        return false;
-    }
-    if (schemeFormData.is_minority === null) {
-        alert('Please indicate if you belong to a minority');
-        return false;
-    }
-    if (schemeFormData.is_student === null) {
-        alert('Please indicate if you are a student');
-        return false;
-    }
-    if (!schemeFormData.employment_status) {
-        alert('Please select your employment status');
-        return false;
-    }
-    if (schemeFormData.is_govt_employee === null) {
-        alert('Please indicate if you are a government employee');
+    if (!schemeFormData.employment_status) { alert('Please select employment status'); return false; }
+    if (schemeFormData.is_govt_employee === null || schemeFormData.is_govt_employee === undefined) {
+        alert('Please indicate govt employee status');
         return false;
     }
 
@@ -581,6 +848,19 @@ function switchToSignInFromScheme(event) {
     event.preventDefault();
     closeSchemeFinderModal();
     openAuthModal('signin');
+}
+
+
+
+function closeSchemeFinderModal() {
+    const modal = document.getElementById('scheme-finder-modal');
+    modal.classList.add('hidden');
+}
+
+function handleSchemeFinderOverlayClick(event) {
+    if (event.target === event.currentTarget) {
+        closeSchemeFinderModal();
+    }
 }
 
 // ============ Validation ============
