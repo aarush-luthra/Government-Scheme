@@ -1,40 +1,48 @@
-# Government Scheme Assistant (Multilingual RAG)
+# 🇮🇳 Government Scheme Assistant
 
-A state-of-the-art AI assistant designed to help Indian citizens understand government schemes in their native languages. This system combines **Retrieval-Augmented Generation (RAG)** with **Multilingual Neural Machine Translation (NLLB-200)** to provide accurate, context-aware answers in 14+ Indic languages.
+A modern, AI-powered assistant designed to help Indian citizens discover and understand government schemes in their native languages. This system combines **Retrieval-Augmented Generation (RAG)** with **Multilingual Neural Machine Translation (NLLB-200)** to provide accurate, personalized answers in 14+ Indic languages.
 
-![UI Preview](docs/ui_preview.png)
+## ✨ Features
 
-## 🚀 Key Features
+### Core Capabilities
+- **🌐 Multilingual Support** - Ask questions in Hindi, Tamil, Bengali, Marathi, and 11+ more Indian languages
+- **🎯 Personalized Recommendations** - Get scheme suggestions based on your profile (age, location, category, employment status)
+- **🧠 Conversational Memory** - Maintains context across messages for natural dialogue
+- **📚 RAG-Powered Accuracy** - Retrieves information from curated government scheme documents
+- **⚡ Real-time Translation** - Powered by Facebook's NLLB-200 model
 
-- **🗣️ Multilingual Support**: Speak in your native language (Hindi, Tamil, Bengali, Marathi, etc.) and get responses in the same language.
-- **🧠 Conversational Memory**: Remembers context from previous messages (e.g., "What is it?" followed by "Who is eligible?").
-- **📚 RAG Engine**: Retrieves accurate information from a curated knowledge base of government schemes (Vector Store).
-- **✨ Modern UI**: A clean, professional, and responsive chat interface built with HTML5/CSS3.
-- **🔗 Integrated Stack**: unified FastAPI backend serving both the REST API and the Frontend.
+### User Experience
+- **🎨 Modern UI** - Clean, professional interface with dark/light mode support
+- **📱 Responsive Design** - Works seamlessly on desktop and mobile devices
+- **👤 User Profiles** - Create an account to save preferences and get personalized recommendations
+- **🚶 Guest Mode** - Continue as a guest without signing up
+- **🔤 Interface Translation** - The entire UI translates to your selected language
 
 ## 🛠️ Tech Stack
 
-- **Backend**: FastAPI (Python)
-- **Frontend**: HTML5, Vanilla JS, CSS3 (Modern, Responsive)
-- **LLM**: OpenAI GPT-4o-mini (Reasoning & Generation)
-- **Vector DB**: ChromaDB (Semantic Search)
-- **Translation**: `facebook/nllb-200-distilled-600M` (HuggingFace)
-- **Embeddings**: OpenAI `text-embedding-3-small`
+| Component | Technology |
+|-----------|------------|
+| **Backend** | FastAPI (Python) |
+| **Frontend** | HTML5, Vanilla JS, CSS3 |
+| **LLM** | OpenAI GPT-4o-mini |
+| **Vector Database** | ChromaDB |
+| **Translation** | Facebook NLLB-200-distilled-600M |
+| **Embeddings** | OpenAI text-embedding-3-small |
 
-## 📋 Prerequisites
+## 🚀 Quick Start
 
-- **Python 3.10+** (Recommended: 3.12)
-- **OpenAI API Key** (Required for RAG & Chat)
+### Prerequisites
+- Python 3.10+ (Recommended: 3.12)
+- OpenAI API Key
 
-## ⚡ Quick Start
-
-### 1. Clone & Set Up
+### Installation
 
 ```bash
+# Clone the repository
 git clone https://github.com/aarush-luthra/Government-Scheme.git
 cd Government-Scheme
 
-# Create virtual environment
+# Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
@@ -42,56 +50,58 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### Configuration
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the project root:
 
 ```env
 OPENAI_API_KEY=sk-your-openai-api-key-here
 ```
 
-### 3. Run the Application
-
-Start the unified server (Frontend + Backend):
+### Run the Application
 
 ```bash
 python -m backend.app
 ```
 
-### 4. Use the Assistant
-
 Open your browser to: **[http://localhost:8000](http://localhost:8000)**
 
-## 🌐 Supported Languages
-
-The system automatically detects and translates the following languages:
+## 🌍 Supported Languages
 
 | Code | Language | Code | Language |
 |------|----------|------|----------|
-| `en_XX` | English | `hi_IN` | Hindi |
-| `bn_IN` | Bengali | `ta_IN` | Tamil |
-| `te_IN` | Telugu | `mr_IN` | Marathi |
-| `gu_IN` | Gujarati | `kn_IN` | Kannada |
-| `ml_IN` | Malayalam | `pa_IN` | Punjabi |
-| `or_IN` | Odia | `as_IN` | Assamese |
-| `ne_IN` | Nepali | `ur_IN` | Urdu |
+| `en_XX` | English | `hi_IN` | हिन्दी (Hindi) |
+| `bn_IN` | বাংলা (Bengali) | `ta_IN` | தமிழ் (Tamil) |
+| `te_IN` | తెలుగు (Telugu) | `mr_IN` | मराठी (Marathi) |
+| `gu_IN` | ગુજરાતી (Gujarati) | `kn_IN` | ಕನ್ನಡ (Kannada) |
+| `ml_IN` | മലയാളം (Malayalam) | `pa_IN` | ਪੰਜਾਬੀ (Punjabi) |
+| `or_IN` | ଓଡ଼ିଆ (Odia) | `as_IN` | অসমীয়া (Assamese) |
+| `ur_IN` | اردو (Urdu) | `ks_IN` | कॉशुर (Kashmiri) |
 
 ## 🏗️ Architecture
 
 ```
-User (Browser) <--> FastAPI (Backend)
-                        |
-        +---------------+---------------+
-        |                               |
-  [Static Files]                  [API Routes]
-   (HTML/JS/CSS)                        |
-                                        v
-                                 [Orchestrator]
-                                        |
-                   +--------------------+--------------------+
-                   |                                         |
-           [Translator Node]                          [RAG Node]
-       (Facebook NLLB-200 Model)                 (ChromaDB + OpenAI)
+┌─────────────────────────────────────────────────────────┐
+│                    User (Browser)                        │
+└─────────────────────────┬───────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│                  FastAPI Backend                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │   Static    │  │    Auth     │  │    Chat     │     │
+│  │   Files     │  │  Endpoints  │  │     API     │     │
+│  └─────────────┘  └─────────────┘  └──────┬──────┘     │
+└───────────────────────────────────────────┼─────────────┘
+                                            │
+            ┌───────────────────────────────┼───────────────────────┐
+            │                               │                       │
+            ▼                               ▼                       ▼
+    ┌───────────────┐              ┌───────────────┐      ┌───────────────┐
+    │  Translator   │              │  RAG Engine   │      │   User DB     │
+    │  (NLLB-200)   │              │  (ChromaDB +  │      │   (SQLite)    │
+    │               │              │   OpenAI)     │      │               │
+    └───────────────┘              └───────────────┘      └───────────────┘
 ```
 
 ## 📂 Project Structure
@@ -99,33 +109,70 @@ User (Browser) <--> FastAPI (Backend)
 ```
 Government-Scheme/
 ├── backend/
-│   ├── app.py                 # Main application entry point
+│   ├── app.py                 # Main FastAPI application
 │   ├── nlp/
 │   │   └── indicbart.py       # NLLB Translation wrapper
 │   ├── rag/
-│   │   ├── generator.py       # LLM Response generation
+│   │   ├── generator.py       # LLM response generation
 │   │   ├── retriever.py       # Vector search logic
 │   │   └── embeddings.py      # Embedding generation
-│   └── data/                  # Scheme data & Vector DB
-├── frontend/                  # Static assets
-│   ├── index.html             # Main UI
-│   ├── style.css              # Modern styling
-│   └── script.js              # Chat logic
+│   └── data/                  # Vector DB & scheme data
+├── frontend/
+│   ├── index.html             # Main chat interface
+│   ├── style.css              # Modern styling (dark/light mode)
+│   ├── script.js              # Chat logic & UI interactions
+│   ├── onboarding.html        # User profile setup
+│   ├── onboarding.css         # Onboarding styles
+│   └── onboarding.js          # Onboarding logic
+├── data/                      # PDF scheme documents
 ├── requirements.txt           # Python dependencies
+├── .env.example               # Environment template
 └── README.md                  # This file
 ```
 
+## 🔌 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Serve main frontend |
+| `GET` | `/health` | Health check |
+| `POST` | `/chat` | Main chat endpoint |
+| `POST` | `/translate` | Translate single text |
+| `POST` | `/translate/batch` | Translate multiple texts |
+| `GET` | `/languages` | List supported languages |
+| `POST` | `/profile` | Create user profile |
+| `GET` | `/edit` | Get user profile |
+| `POST` | `/edit` | Update user profile |
+| `GET` | `/auth/me` | Get current user info |
+
 ## 🐛 Troubleshooting
 
+### Common Issues
+
 **1. `ModuleNotFoundError: No module named 'backend'`**
-- Make sure you run the app using `python -m backend.app` from the project root.
+```bash
+# Run from the project root directory using:
+python -m backend.app
+```
 
 **2. Translation Model Download Stuck**
-- The NLLB model is ~1.3GB. The first run will take time to download. Ensure you have a stable internet connection.
+- The NLLB model is ~1.3GB. First run requires internet for download.
+- Subsequent runs load from cache.
 
-**3. `OpenAI Error`**
-- Check if your `OPENAI_API_KEY` is set correctly in `.env`.
+**3. `Address already in use` Error**
+```bash
+# Kill existing process on port 8000
+lsof -ti :8000 | xargs kill -9
+```
+
+**4. OpenAI API Error**
+- Verify your `OPENAI_API_KEY` is set correctly in `.env`
+- Check API key has sufficient credits
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📜 License
 
-MIT License. Built for the citizens of India. 🇮🇳
+MIT License - Built with ❤️ for the citizens of India 🇮🇳
