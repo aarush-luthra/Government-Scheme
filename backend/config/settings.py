@@ -27,6 +27,14 @@ class Settings(BaseSettings):
         BASE_DIR / "backend" / "data" / "chroma_db"
     )
 
+    # LLM Extraction (NEW)
+    LLM_EXTRACTION_MODEL: str = "gpt-4o-mini"
+    LLM_EXTRACTION_TEMPERATURE: float = 0.0
+    SEMANTIC_COLLECTION_NAME: str = "semantic_facts"
+    EXTRACTION_CACHE_DIR: str = str(
+        BASE_DIR / "backend" / "data" / "extracted"
+    )
+
     class Config:
         env_file = ".env"
         case_sensitive = True

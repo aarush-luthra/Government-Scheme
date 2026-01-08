@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
+import uuid
+from datetime import datetime
 from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
@@ -46,6 +48,11 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 # Mount frontend static files
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
+# ============ Authentication Storage (In-Memory) ============
+# Note: This resets on server restart. For production, use a database.
+users_db: Dict[str, dict] = {}  # email -> user data
+sessions_db: Dict[str, dict] = {}  # session_id -> session data
+
 
 
 # Request/Response Models
@@ -86,6 +93,255 @@ class BatchTranslateRequest(BaseModel):
 class LanguageInfo(BaseModel):
     code: str
     name: str
+
+
+# ============ Auth Request/Response Models ============
+class LoginRequest(BaseModel):
+    email: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
+
+class ProfileRequest(BaseModel):
+    """Request model for creating/updating user profile"""
+    name: str = Field(..., min_length=1)
+    email: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=6)
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    state: Optional[str] = None
+    area: Optional[str] = None
+    category: Optional[str] = None
+    is_disabled: Optional[bool] = None
+    is_minority: Optional[bool] = None
+    is_student: Optional[bool] = None
+    employment_status: Optional[str] = None
+    is_govt_employee: Optional[bool] = None
+    annual_income: Optional[int] = None
+    family_income: Optional[int] = None
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Request model for updating profile (password optional)"""
+    name: Optional[str] = None
+    email: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    state: Optional[str] = None
+    area: Optional[str] = None
+    category: Optional[str] = None
+    is_disabled: Optional[bool] = None
+    is_minority: Optional[bool] = None
+    is_student: Optional[bool] = None
+    employment_status: Optional[str] = None
+    is_govt_employee: Optional[bool] = None
+    annual_income: Optional[int] = None
+    family_income: Optional[int] = None
+
+
+# ============ Auth Helper Functions ============
+def get_session_from_cookie(request: Request) -> Optional[dict]:
+    """Extract session data from cookie"""
+    session_id = request.cookies.get("session_id")
+    if session_id and session_id in sessions_db:
+        return sessions_db[session_id]
+    return None
+
+
+def create_session(user_id: str, email: str) -> str:
+    """Create a new session and return session_id"""
+    session_id = str(uuid.uuid4())
+    sessions_db[session_id] = {
+        "user_id": user_id,
+        "email": email,
+        "created_at": datetime.now().isoformat()
+    }
+    return session_id
+
+
+# ============ Auth Endpoints ============
+@app.get("/auth/me")
+async def auth_check(request: Request):
+    """Check current authentication status"""
+    session = get_session_from_cookie(request)
+    
+    # Generate a session_id for tracking even if not logged in
+    anonymous_session_id = str(uuid.uuid4())
+    
+    if session:
+        user = users_db.get(session["email"])
+        if user:
+            return {
+                "is_logged_in": True,
+                "user_id": user["user_id"],
+                "user_name": user["name"],
+                "session_id": request.cookies.get("session_id")
+            }
+    
+    return {
+        "is_logged_in": False,
+        "session_id": anonymous_session_id
+    }
+
+
+@app.post("/auth/login")
+async def auth_login(req: LoginRequest, response: Response):
+    """Sign in with email and password"""
+    email = req.email.lower().strip()
+    
+    # Check if user exists
+    user = users_db.get(email)
+    if not user:
+        return {"success": False, "message": "No account found with this email. Please sign up first."}
+    
+    # Check password (simple comparison - production should use bcrypt)
+    if user["password"] != req.password:
+        return {"success": False, "message": "Incorrect password. Please try again."}
+    
+    # Create session
+    session_id = create_session(user["user_id"], email)
+    
+    # Set session cookie
+    response.set_cookie(
+        key="session_id",
+        value=session_id,
+        httponly=True,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7  # 7 days
+    )
+    
+    logger.info(f"User logged in: {email}")
+    
+    return {
+        "success": True,
+        "user": {
+            "user_id": user["user_id"],
+            "name": user["name"]
+        }
+    }
+
+
+@app.post("/auth/logout")
+async def auth_logout(request: Request, response: Response):
+    """Log out and clear session"""
+    session_id = request.cookies.get("session_id")
+    
+    # Remove session from storage
+    if session_id and session_id in sessions_db:
+        del sessions_db[session_id]
+    
+    # Clear the cookie
+    response.delete_cookie(key="session_id")
+    
+    logger.info("User logged out")
+    return {"success": True}
+
+
+@app.post("/profile")
+async def create_profile(req: ProfileRequest, response: Response):
+    """Create a new user profile (sign up)"""
+    email = req.email.lower().strip()
+    
+    # Check if user already exists
+    if email in users_db:
+        return {"success": False, "message": "An account with this email already exists. Please sign in."}
+    
+    # Create user
+    user_id = str(uuid.uuid4())
+    users_db[email] = {
+        "user_id": user_id,
+        "email": email,
+        "password": req.password,  # Production: hash this
+        "name": req.name,
+        "gender": req.gender,
+        "age": req.age,
+        "state": req.state,
+        "area": req.area,
+        "category": req.category,
+        "is_disabled": req.is_disabled,
+        "is_minority": req.is_minority,
+        "is_student": req.is_student,
+        "employment_status": req.employment_status,
+        "is_govt_employee": req.is_govt_employee,
+        "annual_income": req.annual_income,
+        "family_income": req.family_income,
+        "created_at": datetime.now().isoformat()
+    }
+    
+    # Auto-login: create session
+    session_id = create_session(user_id, email)
+    
+    # Set session cookie
+    response.set_cookie(
+        key="session_id",
+        value=session_id,
+        httponly=True,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7  # 7 days
+    )
+    
+    logger.info(f"New user created: {email}")
+    
+    return {
+        "success": True,
+        "user_id": user_id
+    }
+
+
+@app.get("/edit")
+async def get_profile(request: Request):
+    """Get current user's profile for editing"""
+    session = get_session_from_cookie(request)
+    
+    if not session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user = users_db.get(session["email"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Return profile data (exclude password)
+    return {
+        "user_id": user["user_id"],
+        "email": user["email"],
+        "name": user["name"],
+        "gender": user.get("gender"),
+        "age": user.get("age"),
+        "state": user.get("state"),
+        "area": user.get("area"),
+        "category": user.get("category"),
+        "is_disabled": user.get("is_disabled"),
+        "is_minority": user.get("is_minority"),
+        "is_student": user.get("is_student"),
+        "employment_status": user.get("employment_status"),
+        "is_govt_employee": user.get("is_govt_employee"),
+        "annual_income": user.get("annual_income"),
+        "family_income": user.get("family_income")
+    }
+
+
+@app.post("/edit")
+async def update_profile(req: ProfileUpdateRequest, request: Request):
+    """Update current user's profile"""
+    session = get_session_from_cookie(request)
+    
+    if not session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user = users_db.get(session["email"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update fields if provided
+    update_data = req.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        if value is not None:
+            user[key] = value
+    
+    users_db[session["email"]] = user
+    
+    logger.info(f"Profile updated: {session['email']}")
+    
+    return {"success": True, "message": "Profile updated successfully"}
 
 
 # API Endpoints

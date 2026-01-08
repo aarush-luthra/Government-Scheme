@@ -1,14 +1,12 @@
 """
 PDF Ingestion Runner
 
-Orchestrates the PDF ingestion pipeline:
-1. Load PDFs from directory
-2. Chunk text semantically
-3. Generate embeddings
-4. Store in ChromaDB with deduplication
+Fast PDF ingestion pipeline using character-based chunking.
+Loads PDFs → Chunks text → Embeds into ChromaDB.
 """
 
 import hashlib
+import logging
 from typing import List
 from pathlib import Path
 
@@ -20,13 +18,20 @@ from backend.ingestion.pdf_loader import PDFLoader
 from backend.rag.embeddings import EmbeddingGenerator
 from backend.config.settings import settings, VECTOR_DB_DIR
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s  %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 
 def generate_chunk_id(filename: str, page: int, content: str) -> str:
     """
     Generate a unique, deterministic ID for a chunk.
     This ensures re-running the pipeline doesn't create duplicates.
     """
-    # Use first 100 chars of content for hash (enough to be unique)
     content_hash = hashlib.md5(content[:100].encode()).hexdigest()[:8]
     return f"pdf_{filename}_{page}_{content_hash}"
 
@@ -38,8 +43,8 @@ def chunk_documents(documents: List[Document]) -> List[Document]:
     Uses RecursiveCharacterTextSplitter for semantic chunking.
     """
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=settings.CHUNK_SIZE,  # ~1000 chars
-        chunk_overlap=settings.CHUNK_OVERLAP,  # ~200 chars
+        chunk_size=settings.CHUNK_SIZE,
+        chunk_overlap=settings.CHUNK_OVERLAP,
         separators=["\n\n", "\n", ". ", " ", ""],
         length_function=len,
     )
@@ -50,7 +55,6 @@ def chunk_documents(documents: List[Document]) -> List[Document]:
         chunks = splitter.split_text(doc.page_content)
         
         for i, chunk_text in enumerate(chunks):
-            # Create new document with chunk
             chunk_doc = Document(
                 page_content=chunk_text,
                 metadata={
@@ -119,10 +123,7 @@ def run_pdf_ingestion(pdf_dir: str = None, force_reingest: bool = False):
             doc.page_content
         )
         
-        if chunk_id not in existing_ids and not force_reingest:
-            documents_to_add.append(doc)
-            ids_to_add.append(chunk_id)
-        elif force_reingest:
+        if chunk_id not in existing_ids or force_reingest:
             documents_to_add.append(doc)
             ids_to_add.append(chunk_id)
     
