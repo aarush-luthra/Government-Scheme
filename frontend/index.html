@@ -8,13 +8,17 @@
     <meta name="description"
         content="AI-powered assistant helping Indian citizens understand government schemes in their native language">
 
-    <!-- Google Fonts -->
+    <!-- Google Fonts - Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- CSS -->
     <link rel="stylesheet" href="/static/style.css" />
+
+    <!-- Pre-translated Strings -->
+    <script src="/static/translations.js?v=2"></script>
 
     <!-- Markdown Parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -26,7 +30,11 @@
         <!-- Navigation Bar -->
         <nav class="navbar">
             <div class="nav-logo">
-                <span data-i18n="app_title">Government Scheme Assistant</span>
+                <svg class="nav-logo-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+                </svg>
+                <span data-i18n="app_title">GovScheme</span>
             </div>
             <div class="nav-actions">
                 <!-- Language Dropdown -->
@@ -74,46 +82,111 @@
                     </svg>
                 </button>
 
-                <button class="btn btn-primary" onclick="openAuthModal('signin')" data-i18n="signin">Sign In →</button>
+                <button class="btn btn-dark" onclick="openSchemeFinderModal()" data-i18n="cta-btn">GET STARTED</button>
             </div>
         </nav>
 
-        <!-- Hero Section -->
+        <!-- Hero Section - Two Column Layout -->
         <div class="hero">
-            <div class="hero-content">
-                <div class="hero-badge" data-i18n="hero-badge">AI-Powered Assistance</div>
-                <h1 class="hero-title" data-i18n="hero-title">Your AI Guide to Government Schemes</h1>
-                <p class="hero-description" data-i18n="hero-desc">
-                    Get personalized help understanding Indian government schemes in your preferred language.
-                </p>
+            <div class="hero-two-col">
+                <!-- Left Column - Text Content -->
+                <div class="hero-left scroll-reveal">
+                    <p class="hero-tagline" data-i18n="hero-badge">Secure, simple, seamless</p>
+                    <h1 class="hero-title">
+                        <span class="text-accent" data-i18n="hero-accent">Fast-track</span><br>
+                        <span data-i18n="hero-title">to government<br>benefits</span>
+                    </h1>
 
-                <div class="hero-features-compact">
-                    <div class="feature-chip">
-                        <span class="chip-icon">🌐</span>
-                        <span data-i18n="feature-1-title">Multilingual</span>
-                    </div>
-                    <div class="feature-chip">
-                        <span class="chip-icon">✓</span>
-                        <span data-i18n="feature-2-title">Accurate</span>
-                    </div>
-                    <div class="feature-chip">
-                        <span class="chip-icon">💬</span>
-                        <span data-i18n="feature-3-title">Conversational</span>
+                    <!-- Bar Chart Decoration -->
+                    <div class="hero-chart scroll-reveal" style="animation-delay: 0.2s">
+                        <div class="chart-bars">
+                            <div class="chart-bar" style="height: 20px;"></div>
+                            <div class="chart-bar" style="height: 35px;"></div>
+                            <div class="chart-bar" style="height: 25px;"></div>
+                            <div class="chart-bar" style="height: 45px;"></div>
+                            <div class="chart-bar" style="height: 30px;"></div>
+                            <div class="chart-bar" style="height: 55px;"></div>
+                            <div class="chart-bar" style="height: 40px;"></div>
+                            <div class="chart-bar accent" style="height: 70px;"></div>
+                            <div class="chart-bar" style="height: 50px;"></div>
+                            <div class="chart-bar" style="height: 35px;"></div>
+                            <div class="chart-bar" style="height: 45px;"></div>
+                            <div class="chart-bar" style="height: 30px;"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="hero-actions">
-                    <button class="btn btn-cta" onclick="openSchemeFinderModal()">
-                        <span data-i18n="cta-btn">Get Started</span>
-                        <svg viewBox="0 0 24 24" class="btn-icon">
-                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </button>
-                    <button class="btn btn-ghost-link" onclick="continueAsGuest()" data-i18n="skip-btn">
-                        Continue as Guest →
-                    </button>
+                <!-- Right Column - Quick Start Card -->
+                <div class="hero-right scroll-reveal" style="animation-delay: 0.3s">
+                    <div class="quick-start-card">
+                        <div class="card-tabs">
+                            <button class="card-tab active" data-i18n="tab_new">New User</button>
+                            <button class="card-tab" onclick="openAuthModal('signin')" data-i18n="tab_signin">Sign
+                                In</button>
+                        </div>
+
+                        <div class="card-content">
+                            <div class="card-field">
+                                <label data-i18n="quick_lang">Your Language</label>
+                                <div class="card-select" onclick="toggleLanguageDropdown()">
+                                    <span id="card-current-lang">English</span>
+                                    <svg viewBox="0 0 24 24" width="16" height="16">
+                                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div class="card-field">
+                                <label data-i18n="quick_state">Your State</label>
+                                <div class="card-value" data-i18n="quick_all_india">All India</div>
+                            </div>
+
+                            <button class="btn btn-dark btn-full" onclick="openSchemeFinderModal()"
+                                data-i18n="quick_explore">
+                                EXPLORE SCHEMES
+                            </button>
+
+                            <button class="btn-link" onclick="continueAsGuest()" data-i18n="skip-btn">
+                                Continue as Guest →
+                            </button>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="stats-section">
+            <div class="stat-card scroll-reveal">
+                <div class="stat-icon" style="background: #FEF3E2;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#E2825C" fill="none" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                </div>
+                <div class="stat-number" data-i18n="stat_schemes">500+</div>
+                <div class="stat-label" data-i18n="stat_schemes_label">Schemes Available</div>
+            </div>
+
+            <div class="stat-card scroll-reveal" style="animation-delay: 0.1s">
+                <div class="stat-icon" style="background: #E8F4FD;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#4A90D9" fill="none" stroke-width="2">
+                        <path
+                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                </div>
+                <div class="stat-number" data-i18n="stat_serving">AI Powered</div>
+                <div class="stat-label" data-i18n="stat_serving_label">Central & State Schemes</div>
+            </div>
+
+            <div class="stat-card scroll-reveal" style="animation-delay: 0.2s">
+                <div class="stat-icon" style="background: #E6F7ED;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#34A853" fill="none" stroke-width="2">
+                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                        <path d="M2 10h20" />
+                    </svg>
+                </div>
+                <div class="stat-number" data-i18n="stat_languages">15+</div>
+                <div class="stat-label" data-i18n="stat_languages_label">Languages Supported</div>
             </div>
         </div>
     </div>
@@ -555,8 +628,17 @@
         </div>
     </div>
 
+    <!-- Language Loading Overlay -->
+    <div id="language-loading-overlay" class="language-loading-overlay hidden">
+        <div class="language-loading-content">
+            <div class="language-loading-spinner"></div>
+            <h3 id="language-loading-title">Switching to हिन्दी...</h3>
+            <p id="language-loading-status">Verifying translation model...</p>
+        </div>
+    </div>
+
     <!-- JS -->
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js?v=4"></script>
 
 </body>
 

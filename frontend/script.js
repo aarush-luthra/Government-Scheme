@@ -174,89 +174,164 @@ function toggleChatLanguageDropdown() {
     setTimeout(() => document.addEventListener('click', closeHandler), 0);
 }
 
-function selectLanguage(langCode, source) {
+async function selectLanguage(langCode, source) {
+    const langNames = {
+        'hi_IN': 'हिन्दी', 'ta_IN': 'தமிழ்', 'te_IN': 'తెలుగు',
+        'bn_IN': 'বাংলা', 'mr_IN': 'मराठी', 'gu_IN': 'ગુજરાતી',
+        'kn_IN': 'ಕನ್ನಡ', 'ml_IN': 'മലയാളം', 'pa_IN': 'ਪੰਜਾਬੀ',
+        'or_IN': 'ଓଡ଼ିଆ', 'as_IN': 'অসমীয়া', 'ur_IN': 'اردو',
+        'ks_IN': 'कॉशुर', 'mai_IN': 'मैथिली'
+    };
+
+    // 1. Update State & UI Immediately
     currentLanguage = langCode;
     localStorage.setItem('language', langCode);
-
     updateLanguageDisplay(langCode);
-    translatePage(langCode);
 
     // Close dropdowns
     document.getElementById('language-dropdown')?.classList.remove('open');
     document.getElementById('chat-language-dropdown')?.classList.remove('open');
+
+    // 2. Loading Indicator Logic (Only for Chat Page)
+    const isOnChatPage = !document.getElementById('chat-page')?.classList.contains('hidden');
+    const overlay = document.getElementById('language-loading-overlay');
+
+    if (isOnChatPage && langCode !== 'en_XX' && overlay) {
+        const title = document.getElementById('language-loading-title');
+        const status = document.getElementById('language-loading-status');
+        const langName = langNames[langCode] || langCode;
+
+        title.textContent = `Switching to ${langName}...`;
+        status.textContent = 'Translating conversation...';
+        overlay.classList.remove('hidden');
+
+        try {
+            await translatePage(langCode);
+        } finally {
+            // Small delay for smooth UX
+            setTimeout(() => overlay.classList.add('hidden'), 500);
+        }
+    } else {
+        // Landing page or English -> Instant
+        await translatePage(langCode);
+    }
 }
 
 async function translatePage(targetLang) {
+    // Restore English (original) text
     if (targetLang === 'en_XX') {
-        // Restore Text
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.dataset.i18n;
             if (i18nOriginals[key]) {
                 el.innerText = i18nOriginals[key];
             }
         });
-        // Restore Placeholders - NEW
         document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
             const key = el.dataset.i18nPlaceholder + '_pl';
             if (i18nOriginals[key]) {
                 el.setAttribute('placeholder', i18nOriginals[key]);
             }
         });
+        // Update card language display
+        const cardLang = document.getElementById('card-current-lang');
+        if (cardLang) cardLang.textContent = 'English';
+        updateAgeDropdown(targetLang);
         return;
     }
 
-    // Prepare texts to translate
+    // Check if pre-translated strings exist for this language
+    const preTranslations = window.TRANSLATIONS && window.TRANSLATIONS[targetLang];
+
     const textElements = Array.from(document.querySelectorAll('[data-i18n]'));
     const placeholderElements = Array.from(document.querySelectorAll('[data-i18n-placeholder]'));
 
-    // We combine both lists into one array to send to the backend
-    // We prioritize using the 'i18nOriginals' as the source to ensure we always translate from English
-    const textsToTranslate = [
-        ...textElements.map(el => i18nOriginals[el.dataset.i18n] || el.innerText.trim()),
-        ...placeholderElements.map(el => i18nOriginals[el.dataset.i18nPlaceholder + '_pl'] || el.getAttribute('placeholder'))
-    ];
-    if (textsToTranslate.length === 0) return;
+    // Track what needs API translation
+    const needsApiTranslation = [];
+    const elementsForApi = [];
 
-    try {
-        // Optional: Show loading cursor
-        document.body.style.cursor = 'wait';
-
-        const response = await fetch('/translate/batch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                texts: textsToTranslate,
-                source_lang: 'en_XX',
-                target_lang: targetLang
-            })
+    // First pass: Apply pre-translated strings
+    if (preTranslations) {
+        textElements.forEach(el => {
+            const key = el.dataset.i18n;
+            if (preTranslations[key] !== undefined) {
+                el.innerText = preTranslations[key];
+            } else {
+                // Need API translation for this element
+                needsApiTranslation.push(i18nOriginals[key] || el.innerText.trim());
+                elementsForApi.push({ el, type: 'text' });
+            }
         });
 
-        const data = await response.json();
+        placeholderElements.forEach(el => {
+            const key = el.dataset.i18nPlaceholder;
+            if (preTranslations[key + '_pl'] !== undefined) {
+                el.setAttribute('placeholder', preTranslations[key + '_pl']);
+            } else if (preTranslations[key] !== undefined) {
+                el.setAttribute('placeholder', preTranslations[key]);
+            } else {
+                needsApiTranslation.push(i18nOriginals[key + '_pl'] || el.getAttribute('placeholder'));
+                elementsForApi.push({ el, type: 'placeholder' });
+            }
+        });
 
-        if (data.translations) {
-            let tIndex = 0;
-
-            // First, apply translations to Text Elements (Labels, Headers)
-            textElements.forEach(el => {
-                if (data.translations[tIndex]) {
-                    el.innerText = data.translations[tIndex];
-                }
-                tIndex++;
-            });
-
-            // Next, apply translations to Placeholder Elements (Inputs)
-            placeholderElements.forEach(el => {
-                if (data.translations[tIndex]) {
-                    el.setAttribute('placeholder', data.translations[tIndex]);
-                }
-                tIndex++;
-            });
-        }
-    } catch (error) {
-        console.error('Page translation failed:', error);
-    } finally {
-        document.body.style.cursor = 'default';
+        // Update card language display
+        const langNames = {
+            'hi_IN': 'हिन्दी', 'ta_IN': 'தமிழ்', 'te_IN': 'తెలుగు',
+            'bn_IN': 'বাংলা', 'mr_IN': 'मराठी', 'gu_IN': 'ગુજરાતી',
+            'kn_IN': 'ಕನ್ನಡ', 'ml_IN': 'മലയാളം', 'pa_IN': 'ਪੰਜਾਬੀ',
+            'or_IN': 'ଓଡ଼ିଆ', 'as_IN': 'অসমীয়া', 'ur_IN': 'اردو'
+        };
+        const cardLang = document.getElementById('card-current-lang');
+        if (cardLang) cardLang.textContent = langNames[targetLang] || 'English';
+    } else {
+        // No pre-translations, need full API translation
+        textElements.forEach(el => {
+            needsApiTranslation.push(i18nOriginals[el.dataset.i18n] || el.innerText.trim());
+            elementsForApi.push({ el, type: 'text' });
+        });
+        placeholderElements.forEach(el => {
+            needsApiTranslation.push(i18nOriginals[el.dataset.i18nPlaceholder + '_pl'] || el.getAttribute('placeholder'));
+            elementsForApi.push({ el, type: 'placeholder' });
+        });
     }
+
+    // If there are strings that need API translation, call the API
+    // SKIP API translation on chat page to avoid blocking chat responses
+    const isOnChatPage = !document.getElementById('chat-page')?.classList.contains('hidden');
+    if (needsApiTranslation.length > 0 && !isOnChatPage) {
+        try {
+            document.body.style.cursor = 'wait';
+
+            const response = await fetch('/translate/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    texts: needsApiTranslation,
+                    source_lang: 'en_XX',
+                    target_lang: targetLang
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.translations) {
+                elementsForApi.forEach((item, idx) => {
+                    if (data.translations[idx]) {
+                        if (item.type === 'text') {
+                            item.el.innerText = data.translations[idx];
+                        } else {
+                            item.el.setAttribute('placeholder', data.translations[idx]);
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Page translation failed:', error);
+        } finally {
+            document.body.style.cursor = 'default';
+        }
+    }
+
     updateAgeDropdown(targetLang);
 }
 
