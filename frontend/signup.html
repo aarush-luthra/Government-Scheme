@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Government Scheme Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3a8a 0%, #10b981 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+            transition: opacity 0.2s;
+            align-self: flex-start;
+        }
+
+        .back-link:hover {
+            opacity: 0.85;
+        }
+
+        .back-link svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            margin-bottom: 40px;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: #1e3a8a;
+        }
+
+        .auth-logo svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .auth-logo span {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .auth-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .form-section {
+            margin-bottom: 24px;
+        }
+
+        .section-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: #fff;
+        }
+
+        .form-group input::placeholder {
+            color: #9ca3af;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .auth-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .auth-btn:active {
+            transform: translateY(0);
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .auth-footer a {
+            color: #10b981;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .success-message {
+            background: #ecfdf5;
+            color: #059669;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        @media (max-width: 500px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-card {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a href="/" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Back to Home
+    </a>
+
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+                </svg>
+                <span>GovScheme</span>
+            </div>
+            <h1 class="auth-title">Create Your Profile</h1>
+            <p class="auth-subtitle">Fill in your details to get personalized scheme recommendations</p>
+        </div>
+
+        <div id="error-message" class="error-message"></div>
+        <div id="success-message" class="success-message"></div>
+
+        <form id="signup-form">
+            <!-- Account Details -->
+            <div class="form-section">
+                <div class="section-label">Account Details</div>
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password (min 6 chars)"
+                        required minlength="6">
+                </div>
+            </div>
+
+            <!-- Personal Information -->
+            <div class="form-section">
+                <div class="section-label">Personal Information</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="age">Age</label>
+                        <input type="number" id="age" name="age" min="1" max="120" placeholder="Your age">
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <select id="gender" name="gender">
+                            <option value="">Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                            <option value="prefer_not_to_say">Prefer not to say</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="state">State</label>
+                    <select id="state" name="state">
+                        <option value="">Select your state</option>
+                        <option value="andhra_pradesh">Andhra Pradesh</option>
+                        <option value="arunachal_pradesh">Arunachal Pradesh</option>
+                        <option value="assam">Assam</option>
+                        <option value="bihar">Bihar</option>
+                        <option value="chhattisgarh">Chhattisgarh</option>
+                        <option value="goa">Goa</option>
+                        <option value="gujarat">Gujarat</option>
+                        <option value="haryana">Haryana</option>
+                        <option value="himachal_pradesh">Himachal Pradesh</option>
+                        <option value="jharkhand">Jharkhand</option>
+                        <option value="karnataka">Karnataka</option>
+                        <option value="kerala">Kerala</option>
+                        <option value="madhya_pradesh">Madhya Pradesh</option>
+                        <option value="maharashtra">Maharashtra</option>
+                        <option value="manipur">Manipur</option>
+                        <option value="meghalaya">Meghalaya</option>
+                        <option value="mizoram">Mizoram</option>
+                        <option value="nagaland">Nagaland</option>
+                        <option value="odisha">Odisha</option>
+                        <option value="punjab">Punjab</option>
+                        <option value="rajasthan">Rajasthan</option>
+                        <option value="sikkim">Sikkim</option>
+                        <option value="tamil_nadu">Tamil Nadu</option>
+                        <option value="telangana">Telangana</option>
+                        <option value="tripura">Tripura</option>
+                        <option value="uttar_pradesh">Uttar Pradesh</option>
+                        <option value="uttarakhand">Uttarakhand</option>
+                        <option value="west_bengal">West Bengal</option>
+                        <option value="delhi">Delhi</option>
+                        <option value="jammu_kashmir">Jammu & Kashmir</option>
+                        <option value="ladakh">Ladakh</option>
+                        <option value="puducherry">Puducherry</option>
+                        <option value="chandigarh">Chandigarh</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="category">Social Category</label>
+                        <select id="category" name="category">
+                            <option value="">Select</option>
+                            <option value="general">General</option>
+                            <option value="sc">SC</option>
+                            <option value="st">ST</option>
+                            <option value="obc">OBC</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="area">Area Type</label>
+                        <select id="area" name="area">
+                            <option value="">Select</option>
+                            <option value="urban">Urban</option>
+                            <option value="rural">Rural</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employment & Income -->
+            <div class="form-section">
+                <div class="section-label">Employment & Income</div>
+                <div class="form-group">
+                    <label for="employment_status">Employment Status</label>
+                    <select id="employment_status" name="employment_status">
+                        <option value="">Select</option>
+                        <option value="farmer">Farmer</option>
+                        <option value="student">Student</option>
+                        <option value="worker">Worker</option>
+                        <option value="homemaker">Homemaker</option>
+                        <option value="self_employed">Self Employed</option>
+                        <option value="government_employee">Government Employee</option>
+                        <option value="private_employee">Private Employee</option>
+                        <option value="unemployed">Unemployed</option>
+                        <option value="retired">Retired</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="annual_income">Annual Income (₹)</label>
+                        <input type="number" id="annual_income" name="annual_income" min="0" placeholder="Your income">
+                    </div>
+                    <div class="form-group">
+                        <label for="family_income">Family Income (₹)</label>
+                        <input type="number" id="family_income" name="family_income" min="0"
+                            placeholder="Family income">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Details -->
+            <div class="form-section">
+                <div class="section-label">Additional Details</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="is_student">Are you a student?</label>
+                        <select id="is_student" name="is_student">
+                            <option value="">Select</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="is_disabled">Person with Disability?</label>
+                        <select id="is_disabled" name="is_disabled">
+                            <option value="">Select</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="is_minority">Minority Community?</label>
+                        <select id="is_minority" name="is_minority">
+                            <option value="">Select</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="is_govt_employee">Government Employee?</label>
+                        <select id="is_govt_employee" name="is_govt_employee">
+                            <option value="">Select</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="auth-btn">Create Account</button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a href="/auth/login">Sign In</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            // Collect all form data
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                age: document.getElementById('age').value ? parseInt(document.getElementById('age').value) : null,
+                gender: document.getElementById('gender').value || null,
+                state: document.getElementById('state').value || null,
+                area: document.getElementById('area').value || null,
+                category: document.getElementById('category').value || null,
+                employment_status: document.getElementById('employment_status').value || null,
+                annual_income: document.getElementById('annual_income').value ? parseInt(document.getElementById('annual_income').value) : null,
+                family_income: document.getElementById('family_income').value ? parseInt(document.getElementById('family_income').value) : null,
+                is_student: document.getElementById('is_student').value === 'true' ? true : (document.getElementById('is_student').value === 'false' ? false : null),
+                is_disabled: document.getElementById('is_disabled').value === 'true' ? true : (document.getElementById('is_disabled').value === 'false' ? false : null),
+                is_minority: document.getElementById('is_minority').value === 'true' ? true : (document.getElementById('is_minority').value === 'false' ? false : null),
+                is_govt_employee: document.getElementById('is_govt_employee').value === 'true' ? true : (document.getElementById('is_govt_employee').value === 'false' ? false : null)
+            };
+
+            try {
+                const response = await fetch('/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    successDiv.textContent = 'Account created successfully! Redirecting...';
+                    successDiv.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/?chat=true';
+                    }, 1500);
+                } else {
+                    // Handle validation errors (422) or other errors
+                    let errorMessage = data.message || 'Sign up failed. Please try again.';
+                    if (data.detail) {
+                        // Pydantic validation error format
+                        if (Array.isArray(data.detail)) {
+                            errorMessage = data.detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+                        } else {
+                            errorMessage = data.detail;
+                        }
+                    }
+                    errorDiv.textContent = errorMessage;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+
+</html>

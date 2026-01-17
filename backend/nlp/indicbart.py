@@ -178,7 +178,7 @@ class IndicBartTranslator:
         ).to(self.device)
         
         # Get target language token ID
-        forced_bos_token_id = self.tokenizer.lang_code_to_id[tgt_code]
+        forced_bos_token_id = self.tokenizer.convert_tokens_to_ids(tgt_code)
         
         # Generate translation
         with torch.no_grad():
@@ -195,7 +195,45 @@ class IndicBartTranslator:
         
         # Decode output
         translation = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return translation.strip()
+        return self.repair_markdown(translation.strip())
+
+    def repair_markdown(self, text: str) -> str:
+        """Fix common markdown errors introduced by translation models."""
+        import re
+        
+        # Fix bold formatting: "* * text * *" -> "**text**"
+        # Step 1: Fix split asterisks
+        text = re.sub(r'\*\s+\*', '**', text)
+        
+        # Step 2: Fix spaces inside bold tags (e.g. "** text **" -> "**text**")
+        # Match ** followed by space, content, space, **
+        def fix_bold_spaces(match):
+            return f"**{match.group(1).strip()}**"
+        
+        text = re.sub(r'\*\*\s*(.*?)\s*\*\*', fix_bold_spaces, text)
+        
+        # Fix headers: "# # Text" -> "## Text"
+        text = re.sub(r'#\s+#', '##', text)
+        
+        # KEY FIX: Force newlines before bold headers if they are stuck to previous text
+        # "text **Header:**" -> "text\n\n**Header:**"
+        # We look for bold text that acts like a key (e.g., ends with colon or is short)
+        def insert_newline_before_header(match):
+            return f"\n\n{match.group(0)}"
+            
+        # Regex: Non-newline chars followed by space, then bold text covering start of new section
+        text = re.sub(r'(?<=\S) (\*\*[^*]+:\*\*)', insert_newline_before_header, text)
+        
+        # Also ensure list items have newlines before them
+        text = re.sub(r'(?<=\S) (\d+\.)', r'\n\1', text)
+        
+        # Fix list items: "1 ." -> "1."
+        text = re.sub(r'(\d+)\s+\.', r'\1.', text)
+        
+        # Fix bullet points if they became "-Text" instead of "- Text" (optional, but good)
+        text = re.sub(r'^\s*-\s*(\S)', r'- \1', text, flags=re.MULTILINE)
+        
+        return text
     
     def to_english(self, text: str, source_lang: Optional[str] = None) -> str:
         return self.translate(text, source_lang=source_lang, target_lang="en_XX")
