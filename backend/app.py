@@ -8,6 +8,7 @@ from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
 from backend import database as db  # Import database module
+from backend.routes.ocr_routes import router as ocr_router  # OCR functionality
 from dotenv import load_dotenv
 import logging
 
@@ -49,6 +50,9 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 # Mount frontend static files
 # Mount frontend static files
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+# Include OCR router
+app.include_router(ocr_router, prefix="/api/v1", tags=["OCR"])
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():

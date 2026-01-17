@@ -787,6 +787,51 @@
                         </div>
                     </div>
 
+                    <!-- Section 7: Document Scan (OCR) -->
+                    <div class="form-section ocr-section">
+                        <h3 data-i18n="sf_h_scan">📄 Quick Fill with Document Scan</h3>
+                        <p class="form-hint" data-i18n="sf_scan_hint">Upload your Aadhaar, PAN, or Caste Certificate to
+                            auto-fill your details.</p>
+
+                        <div class="ocr-upload-area">
+                            <input type="file" id="ocr-file-input" accept="image/*,.pdf" class="hidden"
+                                onchange="handleOCRFileSelect(event)">
+                            <button type="button" class="btn btn-outline-primary btn-scan"
+                                onclick="document.getElementById('ocr-file-input').click()">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <path d="M21 15l-5-5L5 21" />
+                                </svg>
+                                <span data-i18n="sf_btn_scan">Select Document</span>
+                            </button>
+                            <span id="ocr-file-name" class="ocr-file-name"></span>
+                        </div>
+
+                        <button type="button" class="btn btn-primary btn-full" id="ocr-scan-btn"
+                            onclick="scanDocumentForOCR()" style="display: none;">
+                            <span data-i18n="sf_btn_scan_now">Scan Document</span>
+                        </button>
+
+                        <!-- OCR Loading -->
+                        <div id="ocr-loading" class="ocr-loading hidden">
+                            <div class="spinner-small"></div>
+                            <span data-i18n="sf_scan_loading">Scanning document...</span>
+                        </div>
+
+                        <!-- OCR Results -->
+                        <div id="ocr-results" class="ocr-results hidden">
+                            <div class="ocr-results-header">
+                                <span data-i18n="sf_scan_results">Extracted Information</span>
+                                <button type="button" class="btn btn-success btn-sm" onclick="applyOCRDataToForm()">
+                                    <span data-i18n="sf_btn_apply">Apply to Form</span>
+                                </button>
+                            </div>
+                            <div id="ocr-fields" class="ocr-fields"></div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 

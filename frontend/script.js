@@ -1369,3 +1369,157 @@ function schemeCarouselPrev() {
     const track = document.getElementById('schemesTrack');
     track.scrollBy({ left: -274, behavior: 'smooth' });
 }
+
+// ============ OCR Document Scanning ============
+let ocrExtractedData = null; // Store OCR results
+
+function handleOCRFileSelect(event) {
+    const file = event.target.files[0];
+    const fileNameDisplay = document.getElementById('ocr-file-name');
+    const scanBtn = document.getElementById('ocr-scan-btn');
+
+    if (file) {
+        fileNameDisplay.textContent = file.name;
+        scanBtn.style.display = 'block';
+    } else {
+        fileNameDisplay.textContent = '';
+        scanBtn.style.display = 'none';
+    }
+
+    // Hide previous results
+    document.getElementById('ocr-results').classList.add('hidden');
+}
+
+async function scanDocumentForOCR() {
+    const fileInput = document.getElementById('ocr-file-input');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Please select a document first.');
+        return;
+    }
+
+    const loading = document.getElementById('ocr-loading');
+    const scanBtn = document.getElementById('ocr-scan-btn');
+    const resultsDiv = document.getElementById('ocr-results');
+
+    // Show loading
+    loading.classList.remove('hidden');
+    scanBtn.disabled = true;
+    resultsDiv.classList.add('hidden');
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/v1/ocr', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('OCR request failed');
+        }
+
+        const data = await response.json();
+        ocrExtractedData = data.extracted_fields;
+
+        displayOCRResults(data.extracted_fields);
+
+    } catch (error) {
+        console.error('OCR Error:', error);
+        alert('Failed to scan document. Please try again.');
+    } finally {
+        loading.classList.add('hidden');
+        scanBtn.disabled = false;
+    }
+}
+
+function displayOCRResults(fields) {
+    const resultsDiv = document.getElementById('ocr-results');
+    const fieldsDiv = document.getElementById('ocr-fields');
+
+    // Clear previous results
+    fieldsDiv.innerHTML = '';
+
+    // Field display names
+    const fieldLabels = {
+        document_type: 'Document Type',
+        name: 'Name',
+        dob: 'Date of Birth',
+        age: 'Age',
+        category: 'Category',
+        income: 'Income',
+        id_number: 'ID Number'
+    };
+
+    let hasData = false;
+
+    for (const [key, value] of Object.entries(fields)) {
+        if (value !== null && value !== undefined) {
+            hasData = true;
+            const fieldItem = document.createElement('div');
+            fieldItem.className = 'ocr-field-item';
+            fieldItem.innerHTML = `
+                <span class="ocr-field-label">${fieldLabels[key] || key}</span>
+                <span class="ocr-field-value">${value}</span>
+            `;
+            fieldsDiv.appendChild(fieldItem);
+        }
+    }
+
+    if (hasData) {
+        resultsDiv.classList.remove('hidden');
+    } else {
+        alert('No information could be extracted from this document. Please try a clearer image.');
+    }
+}
+
+function applyOCRDataToForm() {
+    if (!ocrExtractedData) return;
+
+    const fields = ocrExtractedData;
+
+    // Apply name
+    if (fields.name) {
+        document.getElementById('sf-name').value = fields.name;
+        schemeFormData.name = fields.name;
+    }
+
+    // Apply age
+    if (fields.age) {
+        document.getElementById('sf-age').value = fields.age;
+        schemeFormData.age = fields.age;
+
+        // Update age dropdown display
+        const ageTrigger = document.getElementById('age-select-trigger');
+        if (ageTrigger) {
+            ageTrigger.querySelector('span').textContent = fields.age.toString();
+        }
+    }
+
+    // Apply category
+    if (fields.category) {
+        const categoryMap = {
+            'SC': 'sc',
+            'ST': 'st',
+            'OBC': 'obc',
+            'GENERAL': 'general'
+        };
+        const categoryValue = categoryMap[fields.category] || fields.category.toLowerCase();
+        schemeFormData.category = categoryValue;
+        highlightSelection('category-selection', categoryValue);
+    }
+
+    // Apply income
+    if (fields.income) {
+        document.getElementById('sf-annual-income').value = fields.income;
+        schemeFormData.annual_income = fields.income;
+    }
+
+    // Hide OCR results after applying
+    document.getElementById('ocr-results').classList.add('hidden');
+
+    // Show success message
+    alert('Document data applied to form!');
+}
