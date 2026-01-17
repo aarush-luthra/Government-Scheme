@@ -1,3 +1,4 @@
+
 # 🇮🇳 Government Scheme Assistant
 
 A modern, AI-powered assistant designed to help Indian citizens discover and understand government schemes in their native languages. This system combines **Retrieval-Augmented Generation (RAG)** with **Multilingual Neural Machine Translation (NLLB-200)** to provide accurate, personalized answers in 14+ Indic languages.
@@ -25,7 +26,7 @@ A modern, AI-powered assistant designed to help Indian citizens discover and und
 | **Backend** | FastAPI (Python) |
 | **Frontend** | HTML5, Vanilla JS, CSS3 |
 | **LLM** | OpenAI GPT-4o-mini |
-| **Vector Database** | ChromaDB |
+| **Vector Database** | FAISS |
 | **Translation** | Facebook NLLB-200-distilled-600M |
 | **Embeddings** | OpenAI text-embedding-3-small |
 
@@ -44,7 +45,10 @@ cd Government-Scheme
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# On Windows:
+venv\Scripts\activate
+# On Mac/Linux:
+# source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -56,6 +60,14 @@ Create a `.env` file in the project root:
 
 ```env
 OPENAI_API_KEY=sk-your-openai-api-key-here
+```
+
+### Initial Setup (Database Generation)
+
+Since the vector database is large, you must generate it locally after cloning:
+
+```bash
+python backend/ingestion/ingestion_runner.py
 ```
 
 ### Run the Application
@@ -77,6 +89,7 @@ Open your browser to: **[http://localhost:8000](http://localhost:8000)**
 | `ml_IN` | മലയാളം (Malayalam) | `pa_IN` | ਪੰਜਾਬੀ (Punjabi) |
 | `or_IN` | ଓଡ଼ିଆ (Odia) | `as_IN` | অসমীয়া (Assamese) |
 | `ur_IN` | اردو (Urdu) | `ks_IN` | कॉशुर (Kashmiri) |
+| `mai_IN` | मैथिली (Maithili) | `ne_IN` | नेपाली (Nepali) |
 
 ## 🏗️ Architecture
 
@@ -99,7 +112,7 @@ Open your browser to: **[http://localhost:8000](http://localhost:8000)**
             ▼                               ▼                       ▼
     ┌───────────────┐              ┌───────────────┐      ┌───────────────┐
     │  Translator   │              │  RAG Engine   │      │   User DB     │
-    │  (NLLB-200)   │              │  (ChromaDB +  │      │   (SQLite)    │
+    │  (NLLB-200)   │              │  (FAISS +     │      │   (SQLite)    │
     │               │              │   OpenAI)     │      │               │
     └───────────────┘              └───────────────┘      └───────────────┘
 ```
@@ -114,19 +127,16 @@ Government-Scheme/
 │   │   └── indicbart.py       # NLLB Translation wrapper
 │   ├── rag/
 │   │   ├── generator.py       # LLM response generation
-│   │   ├── retriever.py       # Vector search logic
-│   │   └── embeddings.py      # Embedding generation
+│   │   ├── retriever.py       # Vector search logic (FAISS)
+│   │   └── vector_store.py    # FAISS storage implementation
 │   └── data/                  # Vector DB & scheme data
 ├── frontend/
 │   ├── index.html             # Main chat interface
 │   ├── style.css              # Modern styling (dark/light mode)
 │   ├── script.js              # Chat logic & UI interactions
-│   ├── onboarding.html        # User profile setup
-│   ├── onboarding.css         # Onboarding styles
-│   └── onboarding.js          # Onboarding logic
-├── data/                      # PDF scheme documents
+│   ├── signup.html            # User profile setup
+│   └── login.html             # User login
 ├── requirements.txt           # Python dependencies
-├── .env.example               # Environment template
 └── README.md                  # This file
 ```
 
@@ -141,8 +151,6 @@ Government-Scheme/
 | `POST` | `/translate/batch` | Translate multiple texts |
 | `GET` | `/languages` | List supported languages |
 | `POST` | `/profile` | Create user profile |
-| `GET` | `/edit` | Get user profile |
-| `POST` | `/edit` | Update user profile |
 | `GET` | `/auth/me` | Get current user info |
 
 ## 🐛 Troubleshooting
@@ -155,19 +163,22 @@ Government-Scheme/
 python -m backend.app
 ```
 
-**2. Translation Model Download Stuck**
+**2. Chatbot returns empty results**
+- Ensure you have run the ingestion script:
+```bash
+python backend/ingestion/ingestion_runner.py
+```
+
+**3. Translation Model Download Stuck**
 - The NLLB model is ~1.3GB. First run requires internet for download.
 - Subsequent runs load from cache.
 
-**3. `Address already in use` Error**
+**4. `Address already in use` Error**
 ```bash
 # Kill existing process on port 8000
 lsof -ti :8000 | xargs kill -9
+# On Windows, use Task Manager or Resource Monitor
 ```
-
-**4. OpenAI API Error**
-- Verify your `OPENAI_API_KEY` is set correctly in `.env`
-- Check API key has sufficient credits
 
 ## 🤝 Contributing
 
