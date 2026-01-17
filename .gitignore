@@ -31,6 +31,12 @@ wheels/
 
 # Data
 data/chroma_db/
+backend/data/chroma_db/
+backend/data/*.json
+backend/data/*.csv
+backend/data/*.xlsx
+backend/data/*.faiss
+backend/data/*.pkl
 data/*.json
 data/*.csv
 data/*.xlsx

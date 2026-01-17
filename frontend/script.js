@@ -37,11 +37,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeLanguage();
     initializeLanguageDropdowns();
     initializeCustomSelects();
+
+    // Check for ?chat=true query param (redirect from login/signup)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('chat') === 'true') {
+        startChat();
+        // Clean up URL
+        window.history.replaceState({}, document.title, '/');
+    }
 });
 
 async function checkAuthStatus() {
     try {
-        const response = await fetch('/auth/me', {
+        const response = await fetch('http://127.0.0.1:8000/auth/me', {
             credentials: 'include'
         });
         const data = await response.json();
@@ -64,11 +72,33 @@ function updateUIForLoggedInUser() {
     const userMenu = document.getElementById('user-menu');
     const authButtons = document.getElementById('auth-buttons');
     const userNameDisplay = document.getElementById('user-name-display');
+    const navbarSigninBtn = document.getElementById('navbar-signin-btn');
+    const navbarUserMenu = document.getElementById('navbar-user-menu');
+    const navbarUserName = document.getElementById('navbar-user-name');
+    const heroGuestButtons = document.getElementById('hero-guest-buttons');
+    const heroLoggedinButtons = document.getElementById('hero-loggedin-buttons');
 
     if (userMenu && authButtons && currentUser) {
         userMenu.classList.remove('hidden');
         authButtons.classList.add('hidden');
-        userNameDisplay.textContent = `Hello, ${currentUser.name}`;
+        const greeting = (window.TRANSLATIONS && window.TRANSLATIONS[currentLanguage] && window.TRANSLATIONS[currentLanguage]['greeting_hello']) || 'Hello';
+        userNameDisplay.textContent = `${greeting}, ${currentUser.name}`;
+    }
+
+    // Show navbar user menu with logout button on landing page
+    if (navbarUserMenu && navbarSigninBtn && currentUser) {
+        navbarSigninBtn.style.display = 'none';
+        navbarUserMenu.classList.remove('hidden');
+        if (navbarUserName) {
+            const greeting = (window.TRANSLATIONS && window.TRANSLATIONS[currentLanguage] && window.TRANSLATIONS[currentLanguage]['greeting_hello']) || 'Hello';
+            navbarUserName.textContent = `${greeting}, ${currentUser.name}`;
+        }
+    }
+
+    // Toggle hero buttons: hide guest buttons, show logged-in button
+    if (heroGuestButtons && heroLoggedinButtons && currentUser) {
+        heroGuestButtons.classList.add('hidden');
+        heroLoggedinButtons.classList.remove('hidden');
     }
 
     const responseLimitBanner = document.getElementById('response-limit-banner');
@@ -80,10 +110,26 @@ function updateUIForLoggedInUser() {
 function updateUIForAnonymousUser() {
     const userMenu = document.getElementById('user-menu');
     const authButtons = document.getElementById('auth-buttons');
+    const navbarSigninBtn = document.getElementById('navbar-signin-btn');
+    const navbarUserMenu = document.getElementById('navbar-user-menu');
+    const heroGuestButtons = document.getElementById('hero-guest-buttons');
+    const heroLoggedinButtons = document.getElementById('hero-loggedin-buttons');
 
     if (userMenu && authButtons) {
         userMenu.classList.add('hidden');
         authButtons.classList.remove('hidden');
+    }
+
+    // Show sign in button, hide user menu on landing page
+    if (navbarSigninBtn && navbarUserMenu) {
+        navbarSigninBtn.style.display = '';
+        navbarUserMenu.classList.add('hidden');
+    }
+
+    // Show guest buttons, hide logged-in button on hero
+    if (heroGuestButtons && heroLoggedinButtons) {
+        heroGuestButtons.classList.remove('hidden');
+        heroLoggedinButtons.classList.add('hidden');
     }
 }
 
@@ -188,6 +234,10 @@ async function selectLanguage(langCode, source) {
     localStorage.setItem('language', langCode);
     updateLanguageDisplay(langCode);
 
+    if (currentUser) {
+        updateUIForLoggedInUser();
+    }
+
     // Close dropdowns
     document.getElementById('language-dropdown')?.classList.remove('open');
     document.getElementById('chat-language-dropdown')?.classList.remove('open');
@@ -233,7 +283,7 @@ async function translatePage(targetLang) {
             }
         });
         // Update card language display
-        const cardLang = document.getElementById('card-current-lang');
+        const cardLang = document.getElementById('card-current-lang-display');
         if (cardLang) cardLang.textContent = 'English';
         updateAgeDropdown(targetLang);
         return;
@@ -254,7 +304,7 @@ async function translatePage(targetLang) {
         textElements.forEach(el => {
             const key = el.dataset.i18n;
             if (preTranslations[key] !== undefined) {
-                el.innerText = preTranslations[key];
+                el.innerHTML = preTranslations[key];
             } else {
                 // Need API translation for this element
                 needsApiTranslation.push(i18nOriginals[key] || el.innerText.trim());
@@ -281,7 +331,7 @@ async function translatePage(targetLang) {
             'kn_IN': 'ಕನ್ನಡ', 'ml_IN': 'മലയാളം', 'pa_IN': 'ਪੰਜਾਬੀ',
             'or_IN': 'ଓଡ଼ିଆ', 'as_IN': 'অসমীয়া', 'ur_IN': 'اردو'
         };
-        const cardLang = document.getElementById('card-current-lang');
+        const cardLang = document.getElementById('card-current-lang-display');
         if (cardLang) cardLang.textContent = langNames[targetLang] || 'English';
     } else {
         // No pre-translations, need full API translation
@@ -302,7 +352,7 @@ async function translatePage(targetLang) {
         try {
             document.body.style.cursor = 'wait';
 
-            const response = await fetch('/translate/batch', {
+            const response = await fetch('http://127.0.0.1:8000/translate/batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -505,6 +555,19 @@ function initCustomSelectOptions(type) {
         });
     });
 }
+
+// ============ Carousel Navigation ============
+function scrollCarousel(direction) {
+    const carousel = document.getElementById('schemes-carousel');
+    if (!carousel) return;
+
+    const scrollAmount = 260; // Card width (220px) + gap (20px) + padding
+    carousel.scrollBy({
+        left: direction * scrollAmount,
+        behavior: 'smooth'
+    });
+}
+
 // ============ Page Navigation ============
 function startChat() {
     document.getElementById('landing-page').classList.add('hidden');
@@ -559,7 +622,7 @@ async function openSchemeFinderModal(mode = 'signup') {
 
         // Fetch Data
         try {
-            const response = await fetch('/edit');
+            const response = await fetch('http://127.0.0.1:8000/edit');
             const profile = await response.json();
             if (profile && Object.keys(profile).length > 0) {
                 populateSchemeForm(profile);
@@ -787,7 +850,7 @@ async function submitEditProfile() {
     if (loading) loading.classList.remove('hidden');
 
     try {
-        const response = await fetch('/edit', {
+        const response = await fetch('http://127.0.0.1:8000/edit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -950,7 +1013,7 @@ async function submitSchemeForm() {
     loading.classList.remove('hidden');
 
     try {
-        const response = await fetch('/profile', {
+        const response = await fetch('http://127.0.0.1:8000/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1139,7 +1202,7 @@ async function submitSignIn() {
     showLoading(true);
 
     try {
-        const response = await fetch('/auth/login', {
+        const response = await fetch('http://127.0.0.1:8000/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1179,12 +1242,12 @@ async function handleLogout() {
         currentUser = null;
         updateUIForAnonymousUser();
 
-        const responseLimitBanner = document.getElementById('response-limit-banner');
-        if (responseLimitBanner) {
-            responseLimitBanner.classList.remove('hidden');
-        }
+        // Redirect to landing page
+        window.location.href = '/';
     } catch (error) {
         console.error('Logout error:', error);
+        // Still redirect even if logout request fails
+        window.location.href = '/';
     }
 }
 
@@ -1214,7 +1277,7 @@ async function sendMessage() {
     input.value = "";
 
     try {
-        const response = await fetch("/chat", {
+        const response = await fetch("http://127.0.0.1:8000/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -1224,7 +1287,8 @@ async function sendMessage() {
                 message: message,
                 history: chatHistory,
                 source_lang: "auto", // Auto-detect input language
-                target_lang: currentLanguage // Force output to selected language
+                target_lang: currentLanguage, // Force output to selected language
+                user_id: currentUser ? currentUser.user_id : null // Pass user_id for authenticated users
             })
         });
 
@@ -1243,21 +1307,26 @@ async function sendMessage() {
         chatHistory.push({ role: "user", content: message });
         chatHistory.push({ role: "assistant", content: data.reply });
 
-        addMessage("Assistant", data.reply, "bot");
+        addMessage("Assistant", data.reply || "Thinking...", "bot", data.sources);
 
     } catch (error) {
-        addMessage("Assistant", "❌ Unable to connect to server. Please ensure the backend is running.", "bot");
-        console.error(error);
+        console.error("Chat Error:", error);
+        let errorMsg = "❌ An error occurred. Please try again.";
+        if (error.message.includes("Failed to fetch")) {
+            errorMsg = "❌ Unable to connect to server. Please ensure the backend is running.";
+        }
+        addMessage("Assistant", errorMsg, "bot");
     }
 }
 
-function addMessage(sender, text, className) {
+function addMessage(sender, text, className, sources = null) {
+    if (!text) text = ""; // Safe handling for null/undefined
     const chatBox = document.getElementById("chat-box");
 
     const msgDiv = document.createElement("div");
     msgDiv.className = `message ${className}`;
 
-    const contentHtml = className === "bot" ? marked.parse(text) : text;
+    let contentHtml = className === "bot" ? marked.parse(text || "") : text;
 
     msgDiv.innerHTML = `
         <div class="message-bubble">
@@ -1287,4 +1356,16 @@ function updateResponseLimitBanner(remaining) {
         banner.classList.remove('hidden');
         text.textContent = `${remaining} free message${remaining !== 1 ? 's' : ''} remaining`;
     }
+}
+
+// ============ Scheme Carousel Functions ============
+function schemeCarouselNext() {
+    const track = document.getElementById('schemesTrack');
+    // Scroll by card width (250px) + gap (24px)
+    track.scrollBy({ left: 274, behavior: 'smooth' });
+}
+
+function schemeCarouselPrev() {
+    const track = document.getElementById('schemesTrack');
+    track.scrollBy({ left: -274, behavior: 'smooth' });
 }

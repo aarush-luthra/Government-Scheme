@@ -7,6 +7,7 @@ from datetime import datetime
 from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
+from backend import database as db  # Import database module
 from dotenv import load_dotenv
 import logging
 
@@ -46,12 +47,15 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 # Mount frontend static files
+# Mount frontend static files
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
-# ============ Authentication Storage (In-Memory) ============
-# Note: This resets on server restart. For production, use a database.
-users_db: Dict[str, dict] = {}  # email -> user data
-sessions_db: Dict[str, dict] = {}  # session_id -> session data
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204) # No content, stops 404 logs
+
+# ============ Authentication Storage (SQLite) ============
+# User data and sessions are now stored in SQLite database via database.py
 
 
 
@@ -62,6 +66,7 @@ class ChatRequest(BaseModel):
     target_lang: Optional[str] = Field(None, description="Preferred response language. If null, defaults to source language.")
     history: Optional[List[Dict[str, str]]] = Field(default=[], description="Chat history (list of role/content dicts)")
     user_profile: Optional[Dict[str, Any]] = Field(default=None, description="User profile data for personalization")
+    user_id: Optional[str] = Field(default=None, description="User ID for loading profile and persisting chat history")
 
 
 class ChatResponse(BaseModel):
@@ -70,6 +75,7 @@ class ChatResponse(BaseModel):
     language_name: Optional[str] = None
     original_message: Optional[str] = None
     translated_message: Optional[str] = None
+
 
 
 class TranslateRequest(BaseModel):
@@ -142,20 +148,9 @@ class ProfileUpdateRequest(BaseModel):
 def get_session_from_cookie(request: Request) -> Optional[dict]:
     """Extract session data from cookie"""
     session_id = request.cookies.get("session_id")
-    if session_id and session_id in sessions_db:
-        return sessions_db[session_id]
+    if session_id:
+        return db.get_session(session_id)
     return None
-
-
-def create_session(user_id: str, email: str) -> str:
-    """Create a new session and return session_id"""
-    session_id = str(uuid.uuid4())
-    sessions_db[session_id] = {
-        "user_id": user_id,
-        "email": email,
-        "created_at": datetime.now().isoformat()
-    }
-    return session_id
 
 
 # ============ Auth Endpoints ============
@@ -168,11 +163,11 @@ async def auth_check(request: Request):
     anonymous_session_id = str(uuid.uuid4())
     
     if session:
-        user = users_db.get(session["email"])
+        user = db.get_user_by_email(session["email"])
         if user:
             return {
                 "is_logged_in": True,
-                "user_id": user["user_id"],
+                "user_id": user["id"],
                 "user_name": user["name"],
                 "session_id": request.cookies.get("session_id")
             }
@@ -189,7 +184,7 @@ async def auth_login(req: LoginRequest, response: Response):
     email = req.email.lower().strip()
     
     # Check if user exists
-    user = users_db.get(email)
+    user = db.get_user_by_email(email)
     if not user:
         return {"success": False, "message": "No account found with this email. Please sign up first."}
     
@@ -198,7 +193,7 @@ async def auth_login(req: LoginRequest, response: Response):
         return {"success": False, "message": "Incorrect password. Please try again."}
     
     # Create session
-    session_id = create_session(user["user_id"], email)
+    session_id = db.create_session(user["id"], email)
     
     # Set session cookie
     response.set_cookie(
@@ -214,7 +209,7 @@ async def auth_login(req: LoginRequest, response: Response):
     return {
         "success": True,
         "user": {
-            "user_id": user["user_id"],
+            "user_id": user["id"],
             "name": user["name"]
         }
     }
@@ -226,8 +221,8 @@ async def auth_logout(request: Request, response: Response):
     session_id = request.cookies.get("session_id")
     
     # Remove session from storage
-    if session_id and session_id in sessions_db:
-        del sessions_db[session_id]
+    if session_id:
+        db.delete_session(session_id)
     
     # Clear the cookie
     response.delete_cookie(key="session_id")
@@ -241,34 +236,32 @@ async def create_profile(req: ProfileRequest, response: Response):
     """Create a new user profile (sign up)"""
     email = req.email.lower().strip()
     
-    # Check if user already exists
-    if email in users_db:
+    # Create user in database
+    result = db.create_user(
+        email=email,
+        password=req.password,
+        name=req.name,
+        gender=req.gender,
+        age=req.age,
+        state=req.state,
+        area=req.area,
+        category=req.category,
+        is_disabled=req.is_disabled,
+        is_minority=req.is_minority,
+        is_student=req.is_student,
+        employment_status=req.employment_status,
+        is_govt_employee=req.is_govt_employee,
+        annual_income=req.annual_income,
+        family_income=req.family_income
+    )
+    
+    if not result:
         return {"success": False, "message": "An account with this email already exists. Please sign in."}
     
-    # Create user
-    user_id = str(uuid.uuid4())
-    users_db[email] = {
-        "user_id": user_id,
-        "email": email,
-        "password": req.password,  # Production: hash this
-        "name": req.name,
-        "gender": req.gender,
-        "age": req.age,
-        "state": req.state,
-        "area": req.area,
-        "category": req.category,
-        "is_disabled": req.is_disabled,
-        "is_minority": req.is_minority,
-        "is_student": req.is_student,
-        "employment_status": req.employment_status,
-        "is_govt_employee": req.is_govt_employee,
-        "annual_income": req.annual_income,
-        "family_income": req.family_income,
-        "created_at": datetime.now().isoformat()
-    }
+    user_id = result["user_id"]
     
     # Auto-login: create session
-    session_id = create_session(user_id, email)
+    session_id = db.create_session(user_id, email)
     
     # Set session cookie
     response.set_cookie(
@@ -295,7 +288,7 @@ async def get_profile(request: Request):
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    user = users_db.get(session["email"])
+    user = db.get_user_by_email(session["email"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -327,17 +320,16 @@ async def update_profile(req: ProfileUpdateRequest, request: Request):
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    user = users_db.get(session["email"])
+    user = db.get_user_by_email(session["email"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Update fields if provided
     update_data = req.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        if value is not None:
-            user[key] = value
+    success = db.update_user(session["email"], **update_data)
     
-    users_db[session["email"]] = user
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update profile")
     
     logger.info(f"Profile updated: {session['email']}")
     
@@ -350,6 +342,24 @@ async def update_profile(req: ProfileUpdateRequest, request: Request):
 async def serve_frontend():
     """Serve the frontend index.html"""
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+
+@app.get("/auth/login")
+async def serve_login_page():
+    """Serve the login page"""
+    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+
+
+@app.get("/signup")
+async def serve_signup_page():
+    """Serve the signup page"""
+    return FileResponse(os.path.join(FRONTEND_DIR, "signup.html"))
+
+
+@app.get("/profile")
+async def serve_profile_page():
+    """Serve the signup/profile page (alias for signup)"""
+    return FileResponse(os.path.join(FRONTEND_DIR, "signup.html"))
 
 
 @app.get("/onboarding")
@@ -477,8 +487,22 @@ async def chat(req: ChatRequest):
         detected_lang = None
         language_name = None
         
+        # Load user profile from database if user_id provided and no profile in request
+        user_profile = req.user_profile
+        if req.user_id and not user_profile:
+            user_profile = db.get_user_profile_for_chat(req.user_id)
+            if user_profile:
+                logger.info(f"Loaded profile from database for user: {req.user_id}")
+        
+        # Load chat history from database if user_id provided
+        db_chat_history = []
+        if req.user_id:
+            db_chat_history = db.get_chat_history(req.user_id)
+            if db_chat_history:
+                logger.info(f"Loaded {len(db_chat_history)} chat entries from database")
+        
         # Step 1: Detect or validate source language
-        if req.source_lang is None:
+        if req.source_lang is None or req.source_lang == "auto":
             detected_lang = translator.detect_language_code(req.message)
             if detected_lang is None:
                 # Assume English if detection fails
@@ -501,18 +525,30 @@ async def chat(req: ChatRequest):
         else:
             english_message = req.message
         
-        # Step 3: Retrieve relevant documents
-        docs = retriever.search(english_message, k=4)
+        # Step 3: Retrieve relevant documents using profile-aware search
+        if user_profile:
+            # Use profile-based multi-query search for better eligibility matching
+            docs = retriever.search_by_profile(user_profile, k=8)
+            logger.info(f"Profile-based search returned {len(docs)} documents")
+        else:
+            # Standard query search
+            docs = retriever.search(english_message, k=6)
         
-
+        # Merge database chat history with request history
+        merged_history = req.history or []
+        if db_chat_history:
+            # Convert database format to chat format (last 10 entries)
+            for entry in db_chat_history[-10:]:
+                merged_history.append({"role": "user", "content": entry["question"]})
+                merged_history.append({"role": "assistant", "content": entry["answer"]})
         
-        # Step 4: Generate answer
-        context = "\n\n".join([doc.page_content for doc in docs])
+        # Step 4: Generate answer with strict eligibility checking
+        context = "\n\n---\n\n".join([doc.page_content for doc in docs])
         reply = generate_answer(
             user_question=english_message,
             context=context,
-            history=req.history,
-            user_profile=req.user_profile
+            history=merged_history,
+            user_profile=user_profile
         )
         
         # Step 5: Translate response if needed
@@ -520,6 +556,17 @@ async def chat(req: ChatRequest):
             reply = translator.from_english(reply, target_lang)
             logger.info(f"Translated response to {target_lang}")
         
+        # Extract source titles
+        source_titles = sorted(list(set([
+            doc.metadata.get("scheme_name") or doc.metadata.get("title", "Unknown Scheme")
+            for doc in docs
+        ])))
+        
+        # Save chat entry to database for authenticated users
+        if req.user_id:
+            db.append_chat_entry(req.user_id, original_message, reply)
+            logger.info(f"Saved chat entry for user: {req.user_id}")
+
         return ChatResponse(
             reply=reply,
             detected_language=detected_lang,
