@@ -2304,3 +2304,209 @@ input::placeholder {
   font-weight: bold;
   animation: scaleIn 0.3s ease-out;
 }
+
+/* ============ Verification Modal ============ */
+
+/* OCR Section in Scheme Finder (Edit Profile) */
+.ocr-section {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px dashed #10b981;
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.ocr-section h3 {
+  color: #10b981;
+  margin-bottom: 8px;
+}
+
+.ocr-section-desc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.verification-modal {
+  text-align: center;
+  max-width: 480px;
+}
+
+.verification-icon {
+  margin: 0 auto 16px;
+  width: 64px;
+  height: 64px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+}
+
+/* Scan Button */
+.btn-verify-scan {
+  background: #10b981;
+  color: white;
+  padding: 16px 24px;
+  font-size: 1rem;
+  gap: 10px;
+}
+
+.btn-verify-scan:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* File Display */
+.verify-file-display {
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.verify-file-display span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.btn-verify-process {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.btn-verify-process span {
+  color: #ffffff !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+}
+
+.btn-verify-process:hover {
+  background: #059669 !important;
+}
+
+/* Processing */
+.verify-processing {
+  padding: 24px;
+  text-align: center;
+}
+
+.verify-processing p {
+  color: var(--text-secondary);
+  margin-top: 12px;
+}
+
+/* Comparison Table */
+.verify-comparison {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.comparison-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.comparison-table th {
+  background: var(--accent-light);
+  color: var(--text-secondary);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.comparison-table td {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.comparison-table tr:last-child td {
+  border-bottom: none;
+}
+
+.comparison-table .field-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.comparison-table .value-match {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.comparison-table .value-mismatch {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.comparison-table .value-empty {
+  color: var(--text-muted);
+}
+
+/* Error */
+.verify-error {
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: var(--error-bg);
+  border: 1px solid var(--error-color);
+  border-radius: var(--radius-sm);
+  color: var(--error-color);
+  font-size: 0.9rem;
+}
+
+/* Divider */
+.verify-divider {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.verify-divider::before,
+.verify-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+
+.verify-divider span {
+  padding: 0 16px;
+}
+
+/* Actions */
+.verify-actions {
+  margin-top: 8px;
+}
+
+.modal-md {
+  max-width: 500px;
+}

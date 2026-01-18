@@ -45,6 +45,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clean up URL
         window.history.replaceState({}, document.title, '/');
     }
+
+    // Check for ?verify=true query param (show verification modal after signup)
+    if (urlParams.get('verify') === 'true') {
+        // Load form data from sessionStorage for comparison
+        const storedData = sessionStorage.getItem('signupFormData');
+        if (storedData) {
+            try {
+                const formData = JSON.parse(storedData);
+                // Populate schemeFormData for comparison
+                schemeFormData.name = formData.name || '';
+                schemeFormData.age = formData.age;
+                schemeFormData.gender = formData.gender;
+                schemeFormData.category = formData.category;
+                schemeFormData.annual_income = formData.annual_income;
+            } catch (e) {
+                console.error('Failed to parse signup form data:', e);
+            }
+        }
+        // Open verification modal
+        openVerificationModal();
+        // Clean up URL
+        window.history.replaceState({}, document.title, '/');
+    }
 });
 
 async function checkAuthStatus() {
@@ -357,7 +380,7 @@ async function translatePage(targetLang) {
 
     textElements.forEach(el => processElement(el, 'text'));
     placeholderElements.forEach(el => processElement(el, 'placeholder'));
-    
+
     // Update card language display
     const langNames = {
         'hi_IN': 'हिन्दी', 'ta_IN': 'தமிழ்', 'te_IN': 'తెలుగు',
@@ -662,6 +685,10 @@ async function openSchemeFinderModal(mode = 'signup') {
             title.textContent = "Edit Your Profile";
         }
 
+        // Show OCR section in Edit mode
+        const ocrSection = document.getElementById('edit-ocr-section');
+        if (ocrSection) ocrSection.classList.remove('hidden');
+
         // Change Button Text & Action
         // Use innerHTML to preserve any potential spans/icons
         submitBtn.innerHTML = "<span>Edit Profile & Continue Chat</span>";
@@ -941,6 +968,10 @@ function resetSchemeFinderUI() {
 
     title.textContent = "Help us find the best schemes for you";
     title.setAttribute('data-i18n', 'sf_modal_title');
+
+    // Hide OCR section in signup mode
+    const ocrSection = document.getElementById('edit-ocr-section');
+    if (ocrSection) ocrSection.classList.add('hidden');
 
     // Use innerHTML to allow for potential child spans
     submitBtn.innerHTML = "<span data-i18n='sf_btn_submit'>Submit Profile & Start Chat</span>";
@@ -1416,3 +1447,229 @@ function schemeCarouselPrev() {
     const track = document.getElementById('schemesTrack');
     track.scrollBy({ left: -274, behavior: 'smooth' });
 }
+
+// ============ Verification Modal (Post Sign-Up OCR) ============
+let verificationFile = null;
+
+function openVerificationModal() {
+    const modal = document.getElementById('verification-modal');
+    resetVerificationModal();
+    modal.classList.remove('hidden');
+}
+
+function closeVerificationModal() {
+    document.getElementById('verification-modal').classList.add('hidden');
+    verificationFile = null;
+}
+
+// Open verification modal from Edit Profile mode
+function openVerificationModalFromEdit() {
+    // Collect current form data for comparison
+    collectFullFormData();
+    // Close edit profile modal first
+    closeSchemeFinderModal();
+    // Open verification modal
+    openVerificationModal();
+}
+
+function handleVerificationOverlayClick(event) {
+    if (event.target === event.currentTarget) {
+        skipVerification();
+    }
+}
+
+function resetVerificationModal() {
+    document.getElementById('verify-scan-section').classList.remove('hidden');
+    document.getElementById('verify-file-display').classList.add('hidden');
+    document.getElementById('verify-processing').classList.add('hidden');
+    document.getElementById('verify-comparison').classList.add('hidden');
+    document.getElementById('verify-error').classList.add('hidden');
+    document.getElementById('verify-file-input').value = '';
+    verificationFile = null;
+}
+
+function triggerVerificationFileInput() {
+    document.getElementById('verify-file-input').click();
+}
+
+function handleVerificationFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showVerificationError('File too large. Maximum size is 5MB.');
+        return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+        showVerificationError('Invalid file type. Please upload PNG, JPG, or PDF.');
+        return;
+    }
+
+    verificationFile = file;
+    document.getElementById('verify-file-name').textContent = file.name;
+    document.getElementById('verify-scan-section').classList.add('hidden');
+    document.getElementById('verify-file-display').classList.remove('hidden');
+    document.getElementById('verify-error').classList.add('hidden');
+}
+
+async function processVerificationDocument() {
+    if (!verificationFile) {
+        showVerificationError('Please select a file first.');
+        return;
+    }
+
+    // Show processing
+    document.getElementById('verify-file-display').classList.add('hidden');
+    document.getElementById('verify-processing').classList.remove('hidden');
+    document.getElementById('verify-error').classList.add('hidden');
+
+    try {
+        const formData = new FormData();
+        formData.append('file', verificationFile);
+
+        const response = await fetch('/api/v1/ocr', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'OCR processing failed');
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            displayComparisonResults(result.extracted_fields);
+        } else {
+            throw new Error(result.message || 'Failed to extract data');
+        }
+
+    } catch (error) {
+        console.error('OCR Error:', error);
+        showVerificationError(error.message || 'Failed to process document. Please try again.');
+        document.getElementById('verify-processing').classList.add('hidden');
+        document.getElementById('verify-scan-section').classList.remove('hidden');
+    }
+}
+
+function displayComparisonResults(scannedData) {
+    document.getElementById('verify-processing').classList.add('hidden');
+    document.getElementById('verify-comparison').classList.remove('hidden');
+
+    const tbody = document.getElementById('comparison-table-body');
+    tbody.innerHTML = '';
+
+    // Fields to compare
+    const fields = [
+        { key: 'name', label: 'Name', entered: schemeFormData.name },
+        { key: 'age', label: 'Age', entered: schemeFormData.age },
+        { key: 'gender', label: 'Gender', entered: schemeFormData.gender },
+        { key: 'category', label: 'Category', entered: schemeFormData.category },
+        { key: 'annual_income', label: 'Annual Income', entered: schemeFormData.annual_income }
+    ];
+
+    fields.forEach(field => {
+        const enteredValue = field.entered || '-';
+        const scannedValue = scannedData[field.key] || '-';
+
+        // Check if values match
+        const isMatch = compareValues(field.entered, scannedData[field.key]);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="field-name">${field.label}</td>
+            <td>${formatValue(enteredValue)}</td>
+            <td class="${isMatch ? 'value-match' : (scannedValue === '-' ? 'value-empty' : 'value-mismatch')}">${formatValue(scannedValue)}</td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Update action buttons - add "Proceed" button
+    const actionsDiv = document.querySelector('.verify-actions');
+    actionsDiv.innerHTML = `
+        <button class="btn btn-verify-scan btn-full" onclick="proceedAfterVerification()" style="margin-bottom: 8px;">
+            Proceed to Chat
+        </button>
+        <button class="btn btn-outline btn-full" onclick="resetVerificationModal()">
+            Scan Another Document
+        </button>
+    `;
+}
+
+function compareValues(entered, scanned) {
+    if (!entered || !scanned) return false;
+    if (entered === '-' || scanned === '-') return false;
+
+    // Normalize for comparison
+    const normalizedEntered = String(entered).toLowerCase().trim();
+    const normalizedScanned = String(scanned).toLowerCase().trim();
+
+    return normalizedEntered === normalizedScanned;
+}
+
+function formatValue(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    return String(value);
+}
+
+function showVerificationError(message) {
+    const errorDiv = document.getElementById('verify-error');
+    document.getElementById('verify-error-message').textContent = message;
+    errorDiv.classList.remove('hidden');
+}
+
+function skipVerification() {
+    closeVerificationModal();
+    startChat();
+}
+
+function proceedAfterVerification() {
+    closeVerificationModal();
+    startChat();
+}
+
+// Modify submitSchemeForm to show verification modal after sign-up
+const originalSubmitSchemeForm = submitSchemeForm;
+submitSchemeForm = async function () {
+    if (!validateFullForm()) return;
+    collectFullFormData();
+
+    const loading = document.getElementById('scheme-form-loading');
+    loading.classList.remove('hidden');
+
+    try {
+        const response = await fetch('http://127.0.0.1:8000/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(schemeFormData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            currentUser = {
+                name: schemeFormData.name,
+                user_id: data.user_id
+            };
+            updateUIForLoggedInUser();
+            closeSchemeFinderModal();
+
+            // Show verification modal instead of directly starting chat
+            openVerificationModal();
+        } else {
+            alert(data.message || 'Failed to save profile');
+        }
+    } catch (error) {
+        console.error('Profile save error:', error);
+        alert('An error occurred. Please try again.');
+    } finally {
+        loading.classList.add('hidden');
+    }
+};
