@@ -189,6 +189,14 @@ def update_user(email: str, **kwargs) -> bool:
     cursor.execute(query, values)
     conn.commit()
     affected = cursor.rowcount
+    
+    if affected == 0:
+        # Check if user exists to distinguish between "not found" and "no changes"
+        cursor.execute('SELECT 1 FROM users WHERE email = ?', (email.lower().strip(),))
+        if cursor.fetchone():
+            conn.close()
+            return True # User exists, so it was just "no changes"
+            
     conn.close()
     
     return affected > 0

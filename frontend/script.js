@@ -299,51 +299,75 @@ async function translatePage(targetLang) {
     const needsApiTranslation = [];
     const elementsForApi = [];
 
-    // First pass: Apply pre-translated strings
-    if (preTranslations) {
-        textElements.forEach(el => {
-            const key = el.dataset.i18n;
-            if (preTranslations[key] !== undefined) {
-                el.innerHTML = preTranslations[key];
-            } else {
-                // Need API translation for this element
-                needsApiTranslation.push(i18nOriginals[key] || el.innerText.trim());
-                elementsForApi.push({ el, type: 'text' });
-            }
-        });
-
-        placeholderElements.forEach(el => {
-            const key = el.dataset.i18nPlaceholder;
-            if (preTranslations[key + '_pl'] !== undefined) {
-                el.setAttribute('placeholder', preTranslations[key + '_pl']);
-            } else if (preTranslations[key] !== undefined) {
-                el.setAttribute('placeholder', preTranslations[key]);
-            } else {
-                needsApiTranslation.push(i18nOriginals[key + '_pl'] || el.getAttribute('placeholder'));
-                elementsForApi.push({ el, type: 'placeholder' });
-            }
-        });
-
-        // Update card language display
-        const langNames = {
-            'hi_IN': 'हिन्दी', 'ta_IN': 'தமிழ்', 'te_IN': 'తెలుగు',
-            'bn_IN': 'বাংলা', 'mr_IN': 'मराठी', 'gu_IN': 'ગુજરાતી',
-            'kn_IN': 'ಕನ್ನಡ', 'ml_IN': 'മലയാളം', 'pa_IN': 'ਪੰਜਾਬੀ',
-            'or_IN': 'ଓଡ଼ିଆ', 'as_IN': 'অসমীয়া', 'ur_IN': 'اردو'
-        };
-        const cardLang = document.getElementById('card-current-lang-display');
-        if (cardLang) cardLang.textContent = langNames[targetLang] || 'English';
-    } else {
-        // No pre-translations, need full API translation
-        textElements.forEach(el => {
-            needsApiTranslation.push(i18nOriginals[el.dataset.i18n] || el.innerText.trim());
-            elementsForApi.push({ el, type: 'text' });
-        });
-        placeholderElements.forEach(el => {
-            needsApiTranslation.push(i18nOriginals[el.dataset.i18nPlaceholder + '_pl'] || el.getAttribute('placeholder'));
-            elementsForApi.push({ el, type: 'placeholder' });
-        });
+    // --- CACHING LOGIC START ---
+    // Load cache from localStorage
+    const cacheKey = `trans_cache_${targetLang}`;
+    let localCache = {};
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) localCache = JSON.parse(cached);
+    } catch (e) {
+        console.warn('Failed to load translation cache', e);
     }
+    // --- CACHING LOGIC END ---
+
+    // First pass: Apply pre-translated strings OR Cache
+    const processElement = (el, type) => {
+        let key, originalText;
+        if (type === 'text') {
+            key = el.dataset.i18n;
+            originalText = i18nOriginals[key] || el.innerText.trim();
+        } else {
+            key = el.dataset.i18nPlaceholder; // Base key
+            // Original logic used '_pl' suffix in originals
+            originalText = i18nOriginals[key + '_pl'] || el.getAttribute('placeholder');
+        }
+
+        // 1. Check Pre-translations (Static)
+        if (preTranslations) {
+            if (type === 'text' && preTranslations[key] !== undefined) {
+                el.innerHTML = preTranslations[key];
+                return;
+            } else if (type === 'placeholder') {
+                if (preTranslations[key + '_pl'] !== undefined) {
+                    el.setAttribute('placeholder', preTranslations[key + '_pl']);
+                    return;
+                } else if (preTranslations[key] !== undefined) {
+                    el.setAttribute('placeholder', preTranslations[key]);
+                    return;
+                }
+            }
+        }
+
+        // 2. Check Local Cache (Dynamic)
+        if (localCache[originalText]) {
+            if (type === 'text') {
+                el.innerText = localCache[originalText];
+            } else {
+                el.setAttribute('placeholder', localCache[originalText]);
+            }
+            return;
+        }
+
+        // 3. Queue for API
+        needsApiTranslation.push(originalText);
+        elementsForApi.push({ el, type, originalText });
+    };
+
+
+    textElements.forEach(el => processElement(el, 'text'));
+    placeholderElements.forEach(el => processElement(el, 'placeholder'));
+    
+    // Update card language display
+    const langNames = {
+        'hi_IN': 'हिन्दी', 'ta_IN': 'தமிழ்', 'te_IN': 'తెలుగు',
+        'bn_IN': 'বাংলা', 'mr_IN': 'मराठी', 'gu_IN': 'ગુજરાતી',
+        'kn_IN': 'ಕನ್ನಡ', 'ml_IN': 'മലയാളം', 'pa_IN': 'ਪੰਜਾਬੀ',
+        'or_IN': 'ଓଡ଼ିଆ', 'as_IN': 'অসমীয়া', 'ur_IN': 'اردو'
+    };
+    const cardLang = document.getElementById('card-current-lang-display');
+    if (cardLang) cardLang.textContent = langNames[targetLang] || 'English';
+
 
     // If there are strings that need API translation, call the API
     // SKIP API translation on chat page to avoid blocking chat responses
@@ -352,11 +376,14 @@ async function translatePage(targetLang) {
         try {
             document.body.style.cursor = 'wait';
 
+            // De-duplicate requests to save bandwidth
+            const uniqueTexts = [...new Set(needsApiTranslation)];
+
             const response = await fetch('http://127.0.0.1:8000/translate/batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    texts: needsApiTranslation,
+                    texts: uniqueTexts,
                     source_lang: 'en_XX',
                     target_lang: targetLang
                 })
@@ -365,15 +392,35 @@ async function translatePage(targetLang) {
             const data = await response.json();
 
             if (data.translations) {
-                elementsForApi.forEach((item, idx) => {
+                // Map results back to original text for O(1) lookup
+                const translationMap = {};
+                uniqueTexts.forEach((text, idx) => {
                     if (data.translations[idx]) {
+                        translationMap[text] = data.translations[idx];
+                        // Update Cache
+                        localCache[text] = data.translations[idx];
+                    }
+                });
+
+                // Apply translations to UI
+                elementsForApi.forEach(item => {
+                    const translatedText = translationMap[item.originalText];
+                    if (translatedText) {
                         if (item.type === 'text') {
-                            item.el.innerText = data.translations[idx];
+                            item.el.innerText = translatedText;
                         } else {
-                            item.el.setAttribute('placeholder', data.translations[idx]);
+                            item.el.setAttribute('placeholder', translatedText);
                         }
                     }
                 });
+
+                // Save updated cache to localStorage
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(localCache));
+                } catch (e) {
+                    console.warn('Quota exceeded for localStorage', e);
+                    // Optional: Clear old caches if quota exceeded
+                }
             }
         } catch (error) {
             console.error('Page translation failed:', error);
