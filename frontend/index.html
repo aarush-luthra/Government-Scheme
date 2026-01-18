@@ -542,6 +542,22 @@
             <div class="scheme-form-container">
                 <div class="scheme-form-content">
 
+                    <!-- OCR Section (visible in Edit Profile mode) -->
+                    <div id="edit-ocr-section" class="form-section ocr-section hidden">
+                        <h3 data-i18n="sf_h_documents">Verify with Documents</h3>
+                        <p class="ocr-section-desc" data-i18n="sf_ocr_desc">Scan a document to auto-fill or verify your
+                            profile information</p>
+                        <button type="button" class="btn btn-verify-scan" onclick="openVerificationModalFromEdit()"
+                            style="width: 100%; margin-top: 12px;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <path d="M9 9h6v6H9z" />
+                            </svg>
+                            <span data-i18n="verify_scan_btn">Scan Document to Verify</span>
+                        </button>
+                    </div>
+
                     <!-- Section 1: Account -->
                     <div class="form-section">
                         <div style="display: flex; justify-content: space-between; align-items: baseline;">
@@ -910,7 +926,94 @@
         </div>
     </div>
 
+    <!-- Verification Modal (Post Sign-Up) -->
+    <div id="verification-modal" class="modal-overlay hidden" onclick="handleVerificationOverlayClick(event)">
+        <div class="modal-container modal-md verification-modal" onclick="event.stopPropagation()">
+            <!-- Close Button -->
+            <button class="modal-close" onclick="closeVerificationModal()">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+            </button>
+
+            <!-- Document Icon -->
+            <div class="verification-icon">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#10b981" stroke-width="1.5">
+                    <path
+                        d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+
+            <h2 class="modal-title" data-i18n="verify_title">Verify Your Details</h2>
+            <p class="modal-subtitle" data-i18n="verify_subtitle">Would you like to scan a document to verify your
+                entered information?</p>
+
+            <!-- Scan Button -->
+            <div id="verify-scan-section">
+                <button class="btn btn-verify-scan btn-full" onclick="triggerVerificationFileInput()">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M9 9h6v6H9z" />
+                    </svg>
+                    <span data-i18n="verify_scan_btn">Scan Document to Verify</span>
+                </button>
+                <input type="file" id="verify-file-input" accept="image/png,image/jpeg,application/pdf"
+                    onchange="handleVerificationFileSelect(event)" style="display: none;" />
+            </div>
+
+            <!-- Selected File Display -->
+            <div id="verify-file-display" class="verify-file-display hidden">
+                <span id="verify-file-name"></span>
+                <button class="btn btn-verify-process btn-full" onclick="processVerificationDocument()">
+                    <span data-i18n="verify_process_btn">Process Document</span>
+                </button>
+            </div>
+
+            <!-- Processing Indicator -->
+            <div id="verify-processing" class="verify-processing hidden">
+                <div class="spinner"></div>
+                <p data-i18n="verify_processing">Scanning document...</p>
+            </div>
+
+            <!-- Comparison Results -->
+            <div id="verify-comparison" class="verify-comparison hidden">
+                <h3 class="comparison-title" data-i18n="verify_comparison_title">Comparison Results</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="verify_field">Field</th>
+                            <th data-i18n="verify_entered">Entered</th>
+                            <th data-i18n="verify_scanned">Scanned</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-table-body">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Error Display -->
+            <div id="verify-error" class="verify-error hidden">
+                <p id="verify-error-message"></p>
+            </div>
+
+            <!-- Divider -->
+            <div class="verify-divider">
+                <span>OR</span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="verify-actions">
+                <button class="btn btn-outline btn-full" onclick="skipVerification()" data-i18n="verify_skip">
+                    Skip Verification
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Language Loading Overlay -->
+
     <div id="language-loading-overlay" class="language-loading-overlay hidden">
         <div class="language-loading-content">
             <div class="language-loading-spinner"></div>

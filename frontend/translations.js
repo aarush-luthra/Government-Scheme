@@ -301,6 +301,18 @@ const TRANSLATIONS = {
 
         "greeting_hello": "हैलो .",
 
+        // Verification Modal translations
+        "verify_title": "अपने विवरण सत्यापित करें",
+        "verify_subtitle": "क्या आप अपनी दर्ज जानकारी को सत्यापित करने के लिए एक दस्तावेज़ स्कैन करना चाहेंगे?",
+        "verify_scan_btn": "सत्यापित करने के लिए दस्तावेज़ स्कैन करें",
+        "verify_process_btn": "दस्तावेज़ प्रोसेस करें",
+        "verify_processing": "दस्तावेज़ स्कैन हो रहा है...",
+        "verify_comparison_title": "तुलना परिणाम",
+        "verify_field": "फ़ील्ड",
+        "verify_entered": "दर्ज किया गया",
+        "verify_scanned": "स्कैन किया गया",
+        "verify_skip": "सत्यापन छोड़ें",
+
     },
 
     "ta_IN": {

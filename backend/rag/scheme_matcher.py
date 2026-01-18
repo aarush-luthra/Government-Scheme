@@ -21,7 +21,7 @@ class SchemeMatcher:
         queries.append("eligibility criteria requirements")
         
         # Category-specific queries
-        category = user_profile.get("category", "").lower()
+        category = (user_profile.get("category") or "").lower()
         if category == "sc":
             queries.append("scheduled caste SC eligibility schemes")
         elif category == "st":
@@ -32,7 +32,7 @@ class SchemeMatcher:
             queries.append("economically weaker section EWS eligibility")
         
         # Gender-specific queries
-        gender = user_profile.get("gender", "").lower()
+        gender = (user_profile.get("gender") or "").lower()
         if gender == "female":
             queries.append("women girl female eligibility schemes benefits")
         
@@ -132,7 +132,7 @@ class SchemeMatcher:
                     confidence -= 0.25
         
         # Check gender
-        user_gender = user_profile.get("gender", "").lower()
+        user_gender = (user_profile.get("gender") or "").lower()
         scheme_gender = scheme_metadata.get("gender")
         if scheme_gender:
             if user_gender == scheme_gender:

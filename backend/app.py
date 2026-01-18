@@ -8,7 +8,7 @@ from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
 from backend import database as db  # Import database module
-from backend.routes.ocr_routes import router as ocr_router  # OCR functionality
+from backend.routes.ocr_routes import router as ocr_router  # Import OCR routes
 from dotenv import load_dotenv
 import logging
 
@@ -32,9 +32,15 @@ from fastapi.responses import FileResponse
 import os
 
 # CORS configuration
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # When allow_credentials is True, allow_origins cannot be ["*"]
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://0.0.0.0:8000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,6 +48,9 @@ app.add_middleware(
 
 # Initialize retriever
 retriever = VectorStoreRetriever()
+
+# Register OCR routes
+app.include_router(ocr_router)
 
 # Determine frontend path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -298,9 +307,9 @@ async def get_profile(request: Request):
     
     # Return profile data (exclude password)
     return {
-        "user_id": user["user_id"],
-        "email": user["email"],
-        "name": user["name"],
+        "user_id": user.get("user_id") or user.get("email"),
+        "email": user.get("email"),
+        "name": user.get("name"),
         "gender": user.get("gender"),
         "age": user.get("age"),
         "state": user.get("state"),
