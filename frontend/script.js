@@ -27,13 +27,12 @@ let schemeFormData = {
 // Language State
 let currentLanguage = localStorage.getItem('language') || 'en_XX';
 
-// Theme State
-let isDarkMode = localStorage.getItem('theme') === 'dark';
+
 
 // ============ Initialization ============
 document.addEventListener('DOMContentLoaded', async () => {
     await checkAuthStatus();
-    initializeTheme();
+
     initializeLanguage();
     initializeLanguageDropdowns();
     initializeCustomSelects();
@@ -155,24 +154,7 @@ function updateUIForAnonymousUser() {
     if (heroLoggedinButtons) heroLoggedinButtons.classList.add('hidden');
 }
 
-// ============ Theme Management ============
-function initializeTheme() {
-    if (isDarkMode) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
-}
 
-function toggleDarkMode() {
-    isDarkMode = !isDarkMode;
-
-    if (isDarkMode) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'light');
-    }
-}
 
 // ============ Language Management ============
 // Store original values for translation
