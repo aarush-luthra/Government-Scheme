@@ -55,18 +55,38 @@ class VectorStore:
             }, f)
         print(f"[INFO] Saved index with {len(self.documents)} documents")
 
-    def add_documents(self, documents: List, embeddings: List):
-        """Add documents with embeddings to the vector store."""
+    def clear(self):
+        """Clear the existing index and documents."""
+        self.index = None
+        self.documents = []
+        self.metadatas = []
+        # Remove existing files
+        if os.path.exists(self.index_path):
+            os.remove(self.index_path)
+        if os.path.exists(self.docs_path):
+            os.remove(self.docs_path)
+        print("[INFO] Cleared existing vector store")
+
+    def add_documents(self, documents: List, embeddings: List, clear_existing: bool = True):
+        """Add documents with embeddings to the vector store.
+        
+        Args:
+            documents: List of Document objects
+            embeddings: List of embedding vectors
+            clear_existing: If True, clears existing index before adding (default: True)
+        """
+        # Clear existing index if requested (prevents duplicates on re-ingestion)
+        if clear_existing:
+            self.clear()
+        
         # Convert embeddings to numpy array
         embeddings_np = np.array(embeddings, dtype=np.float32)
         
-        # Create or update index
-        if self.index is None:
-            # Create new index (L2 distance)
-            dimension = embeddings_np.shape[1]
-            self.index = faiss.IndexFlatL2(dimension)
-            self.documents = []
-            self.metadatas = []
+        # Create new index (L2 distance)
+        dimension = embeddings_np.shape[1]
+        self.index = faiss.IndexFlatL2(dimension)
+        self.documents = []
+        self.metadatas = []
         
         # Add embeddings to index
         self.index.add(embeddings_np)

@@ -94,81 +94,95 @@ class SchemeMatcher:
     @staticmethod
     def check_eligibility_match(user_profile: Dict, scheme_metadata: Dict) -> Tuple[bool, float, List[str]]:
         """
-        Check if user profile matches scheme eligibility criteria.
+        Check if user profile matches scheme eligibility criteria using Penalty-based filters.
         
-        Returns:
-            - is_eligible: Boolean indicating likely eligibility
-            - confidence: Float score 0-1 indicating confidence
-            - reasons: List of matching/non-matching criteria
+        Mandatory fields (State, Category, Employment) now apply high penalties instead of 
+        throwing away the data, allowing the LLM to provide warnings.
         """
         matches = []
         mismatches = []
-        confidence = 0.5  # Start neutral
+        confidence = 0.5  # Base neutral confidence
+        is_eligible = True # Assume eligible until a penalty is applied
         
-        # Check age
+        # --- 1. PENALTY FILTERS (State, Category, Employment) ---
+        
+        # State Check
+        user_state = (user_profile.get("state") or "").lower().replace("_", " ")
+        scheme_gov = (scheme_metadata.get("government") or "").lower()
+        scheme_level = (scheme_metadata.get("level") or "Central").lower()
+        if scheme_level == "state" and scheme_gov:
+            if user_state not in scheme_gov and scheme_gov not in user_state:
+                mismatches.append(f"State: Scheme for {scheme_gov.title()}, you are in {user_state.title()}")
+                confidence = 0.1
+                is_eligible = False
+
+        # Social Category Check
+        user_cat = (user_profile.get("category") or "").lower()
+        scheme_cat = (scheme_metadata.get("category") or "").lower()
+        if scheme_cat and user_cat and scheme_cat not in ["all", "general"]:
+            if scheme_cat not in user_cat and user_cat not in scheme_cat:
+                mismatches.append(f"Category: Scheme for {scheme_cat.upper()}, you are {user_cat.upper()}")
+                confidence = min(confidence, 0.1)
+                is_eligible = False
+
+        # Government Employee Check
+        user_is_govt = user_profile.get("is_govt_employee", False)
+        scheme_exclusions = (scheme_metadata.get("exclusions") or "").lower()
+        if user_is_govt:
+            govt_keywords = ["government employee", "govt employee", "central/state employee", "public sector", "state/central"]
+            if any(k in scheme_exclusions for k in govt_keywords):
+                mismatches.append("Warning: Government employees are explicitly excluded from this scheme")
+                confidence = min(confidence, 0.1)
+                is_eligible = False
+
+        # --- 2. SOFT FILTERS (Eligibility/Weights) ---
+        
+        # Age Check
         user_age = user_profile.get("age")
         if user_age:
             age_min = scheme_metadata.get("age_min")
             age_max = scheme_metadata.get("age_max")
-            
-            if age_min and age_max:
+            if age_min is not None and age_max is not None:
                 if age_min <= user_age <= age_max:
                     matches.append(f"Age {user_age} within {age_min}-{age_max} range")
-                    confidence += 0.15
+                    confidence += 0.2
                 else:
                     mismatches.append(f"Age {user_age} outside {age_min}-{age_max} range")
-                    confidence -= 0.2
+                    confidence -= 0.3
+                    is_eligible = False
         
-        # Check income
+        # Income Check
         user_income = user_profile.get("annual_income") or user_profile.get("income")
         if user_income:
             income_max = scheme_metadata.get("income_max")
             if income_max:
                 if user_income <= income_max:
                     matches.append(f"Income Rs.{user_income:,} within limit Rs.{income_max:,}")
-                    confidence += 0.15
+                    confidence += 0.2
                 else:
                     mismatches.append(f"Income Rs.{user_income:,} exceeds limit Rs.{income_max:,}")
-                    confidence -= 0.25
+                    confidence -= 0.4
+                    is_eligible = False
         
-        # Check gender
+        # Gender Check
         user_gender = (user_profile.get("gender") or "").lower()
-        scheme_gender = scheme_metadata.get("gender")
-        if scheme_gender:
+        scheme_gender = (scheme_metadata.get("gender") or "").lower()
+        if scheme_gender and scheme_gender != "all":
             if user_gender == scheme_gender:
-                matches.append(f"Gender requirement ({scheme_gender}) matches")
-                confidence += 0.1
+                matches.append(f"Gender Match ({scheme_gender.title()})")
+                confidence += 0.15
             else:
-                mismatches.append(f"Gender requirement is {scheme_gender}, user is {user_gender}")
-                confidence -= 0.3
-        
-        # Check disability
-        user_disabled = user_profile.get("is_disabled")
-        scheme_disabled = scheme_metadata.get("is_disabled")
-        if scheme_disabled and not user_disabled:
-            mismatches.append("Scheme requires disability status")
-            confidence -= 0.3
-        elif scheme_disabled and user_disabled:
-            matches.append("Disability requirement matches")
-            confidence += 0.15
-        
-        # Check student status
-        user_student = user_profile.get("is_student")
-        scheme_student = scheme_metadata.get("is_student")
-        if scheme_student and not user_student:
-            mismatches.append("Scheme requires student status")
-            confidence -= 0.2
-        elif scheme_student and user_student:
-            matches.append("Student requirement matches")
-            confidence += 0.1
-        
+                mismatches.append(f"Gender Mismatch (Scheme is for {scheme_gender.title()})")
+                confidence -= 0.4
+                is_eligible = False
+
         # Clamp confidence
         confidence = max(0.0, min(1.0, confidence))
         
-        # Determine eligibility
-        is_eligible = len(mismatches) == 0 or (len(matches) > len(mismatches) and confidence > 0.4)
+        # Final Decision: True if no major mismatches (confidence remains high)
+        is_eligible = is_eligible and confidence > 0.3
         
-        reasons = matches + [f"⚠️ {m}" for m in mismatches]
+        reasons = [f"✅ {m}" for m in matches] + [f"🚩 {m}" for m in mismatches]
         
         return is_eligible, confidence, reasons
     

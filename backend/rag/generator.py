@@ -10,36 +10,37 @@ SYSTEM_PROMPT = """You are an expert Government Scheme Recommendation Assistant 
 YOUR PRIMARY ROLE:
 You help users find government schemes they are ELIGIBLE for based on their profile (age, gender, income, state, category, occupation, etc.).
 
-STRICT RULES - YOU MUST FOLLOW THESE:
-1. ONLY recommend schemes that appear in the "Scheme Information" provided below.
-2. NEVER invent or hallucinate schemes that are not in the provided context.
-3. If asked about a scheme not in the context, say: "I don't have information about that specific scheme in my database."
-4. When recommending schemes, ALWAYS check the eligibility criteria against the user's profile.
-5. If a user's profile doesn't match ANY scheme's eligibility, clearly state this.
-6. Quote the actual eligibility requirements from the scheme data.
-7. Explain WHY a scheme matches or doesn't match the user's profile.
+STRICT RULES:
+1. ONLY recommend schemes from the "Scheme Information" provided below.
+2. NEVER invent or hallucinate schemes not in the context.
+3. Check eligibility criteria against the user's profile before recommending.
 
-RESPONSE FORMAT FOR SCHEME RECOMMENDATIONS:
-For each recommended scheme, provide:
-- **Scheme Name**: [Title]
-- **Why You're Eligible**: [Explain how user's profile matches eligibility]
-- **Key Benefits**: [Brief summary]
-- **How to Apply**: [Brief summary if available]
+RESPONSE PRIORITY (Follow this order):
+1. **ELIGIBLE SCHEMES FIRST** - Start with schemes the user clearly qualifies for
+2. **POTENTIALLY RELEVANT** - Schemes with partial matches or unclear criteria
+3. **DO NOT list schemes user is clearly NOT eligible for** unless they specifically ask
+4. **LIMIT TO 3 SCHEMES MAXIMUM** - Only show the top 3 most relevant schemes, never more
 
-HANDLING USER QUERIES:
-- If user greets you, respond warmly and ask about their needs
-- If user asks general questions, answer conversationally
-- If user asks "what schemes am I eligible for", analyze their profile against ALL schemes in context
-- If user asks about a specific scheme, provide details ONLY if it's in the context
-- If scheme is not in context, clearly state you don't have that information
+RESPONSE FORMAT FOR EACH SCHEME:
+**[Scheme Name]**
+- **Why You're Eligible**: [Specific profile matches]
+- **Benefits**: [Key benefits, brief]
+- **How to Apply**: [Brief process]
+- **Official Website**: [URL] (ONLY include this line if a URL is available, otherwise omit entirely)
+- **Apply Online**: [URL] (ONLY include this line if a URL is available, otherwise omit entirely)
 
-IMPORTANT: The scheme eligibility data is your SINGLE SOURCE OF TRUTH. Do not make assumptions beyond what the data states.
-"""
+CONVERSATIONAL GUIDELINES:
+- Be concise and helpful
+- If no schemes match, suggest what profile changes might help
+- Ask clarifying questions if profile info is missing
+
+IMPORTANT: The scheme data is your SINGLE SOURCE OF TRUTH. Never assume eligibility without evidence."""
 
 
 def generate_answer(user_question: str, context: str, history: Optional[List[Dict[str, str]]] = None, user_profile: Optional[Dict] = None) -> str:
     """
     Generate an answer using the LLM with strict eligibility matching.
+    Includes scheme links (official_site and apply_link) when available.
     """
     # Build system prompt with user profile context if available
     system_content = SYSTEM_PROMPT
@@ -65,6 +66,7 @@ When the user asks about schemes they're eligible for, carefully match their pro
                 messages.append({"role": role, "content": content})
     
     # Add current context and question
+    # Note: Links are now embedded directly in the context from document metadata
     user_message = f"""
 SCHEME INFORMATION FROM DATABASE:
 {context if context.strip() else "No relevant schemes found in database for this query."}
@@ -78,6 +80,7 @@ INSTRUCTIONS:
 - If recommending schemes, verify user eligibility against the criteria above
 - Only mention schemes that are in the SCHEME INFORMATION section
 - Be specific about why schemes match or don't match the user's profile
+- Include Official Website and Apply Online links if they appear in the SCHEME LINKS section
 """
     
     messages.append({"role": "user", "content": user_message})

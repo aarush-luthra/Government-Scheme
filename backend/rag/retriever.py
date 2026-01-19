@@ -29,16 +29,21 @@ class VectorStoreRetriever:
         # Convert to Document objects
         documents = []
         for result in results:
+            # Add distance to metadata so it's preserved
+            metadata = result['metadata'].copy()
+            metadata['distance'] = result['distance']
+            
             doc = Document(
                 page_content=result['content'],
-                metadata=result['metadata']
+                metadata=metadata
             )
             documents.append(doc)
         
         # Log retrieved documents
         print(f"\n[RETRIEVER] Retrieved {len(documents)} documents for query: '{query}'")
         for i, doc in enumerate(documents):
-            scheme_name = doc.metadata.get('scheme_name', 'Unknown')
+            # Fallback to 'title' if 'scheme_name' is missing
+            scheme_name = doc.metadata.get('scheme_name') or doc.metadata.get('title') or 'Unknown'
             print(f"   {i+1}. {scheme_name} (Score: {doc.metadata.get('distance', 0):.4f})")
             
         return documents

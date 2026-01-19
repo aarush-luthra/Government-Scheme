@@ -22,6 +22,9 @@ def chunk_scheme(scheme: Dict) -> List[Document]:
         "level": scheme.get("level", "Central"),
         "source": scheme.get("source", ""),
         "url": scheme.get("url", ""),
+        # Scheme links (from scheme_links.json, merged during ingestion)
+        "official_site": scheme.get("official_site", ""),
+        "apply_link": scheme.get("apply_link", ""),
         # Structured eligibility for filtering
         "age_min": eligibility_criteria.get("age_min"),
         "age_max": eligibility_criteria.get("age_max"),

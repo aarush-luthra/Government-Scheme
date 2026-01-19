@@ -313,6 +313,15 @@ const TRANSLATIONS = {
         "verify_scanned": "स्कैन किया गया",
         "verify_skip": "सत्यापन छोड़ें",
 
+        // Quick Action Button translations
+        "qa_label": "त्वरित कार्रवाई:",
+        "qa_find_schemes": "मेरी योजनाएं खोजें",
+        "qa_browse_categories": "श्रेणियां देखें",
+        "qa_help": "सहायता",
+        "qa_more_about": "अधिक जानें",
+        "qa_more_schemes": "अधिक योजनाएं",
+        "qa_how_to_apply": "आवेदन कैसे करें",
+
     },
 
     "ta_IN": {

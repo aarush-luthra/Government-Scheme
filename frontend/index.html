@@ -31,8 +31,12 @@
         <nav class="navbar">
             <div class="nav-logo">
                 <svg class="nav-logo-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="2" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                    <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
                 </svg>
                 <span data-i18n="app_title">GovScheme</span>
             </div>
@@ -67,21 +71,6 @@
                     </div>
                 </div>
 
-                <!-- Dark Mode Toggle -->
-                <button class="btn btn-icon" onclick="toggleDarkMode()" title="Toggle dark/light mode"
-                    id="theme-toggle">
-                    <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />
-                        <path
-                            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                    </svg>
-                    <svg class="icon-moon hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"
-                        stroke="none">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                    </svg>
-                </button>
-
                 <!-- User Menu (shown when logged in) -->
                 <div id="navbar-user-menu" class="user-menu hidden">
                     <span id="navbar-user-name" style="font-weight: 500; margin-right: 8px;"></span>
@@ -95,46 +84,50 @@
             </div>
         </nav>
 
-        <!-- Hero Section - Gradient with Family Photo -->
-        <div class="hero hero-gradient">
+        <!-- Hero Section - Clean White -->
+        <div class="hero">
             <div class="hero-content-wrapper">
                 <div class="hero-text-content">
                     <h1 class="hero-main-title">
                         <span class="hero-accent-text" data-i18n="hero-accent">Fast-track</span><br>
-                        <span data-i18n="hero-title">to government<br>benefits</span>
+                        <span data-i18n="hero-title">to government benefits</span>
                     </h1>
+                    <p class="hero-subtitle">
+                        Your AI-powered guide to discovering and applying for Indian government schemes in your native
+                        language.
+                    </p>
+
                     <!-- Guest buttons (shown when not logged in) -->
                     <div id="hero-guest-buttons" class="hero-cta-buttons">
-                        <button class="btn btn-white" onclick="window.location.href='/profile'"
-                            data-i18n="hero-signup">Sign Up</button>
-                        <button class="btn btn-outline-white" onclick="continueAsGuest()"
-                            data-i18n="hero-continue">Continue as Guest</button>
+                        <button class="btn btn-primary" onclick="window.location.href='/profile'"
+                            data-i18n="hero-signup">Get Started</button>
+                        <button class="btn btn-outline" onclick="continueAsGuest()" data-i18n="hero-continue">Continue
+                            as Guest</button>
                     </div>
                     <!-- Logged in button (shown when logged in) -->
                     <div id="hero-loggedin-buttons" class="hero-cta-buttons hidden">
-                        <button class="btn btn-white" onclick="startChat()" data-i18n="start_chatting">Start
+                        <button class="btn btn-primary" onclick="startChat()" data-i18n="start_chatting">Start
                             Chatting</button>
                     </div>
                 </div>
-                <!-- Image removed as per request -->
             </div>
         </div>
 
-        <!-- Statistics Section -->
+        <!-- Statistics Section - Minimal -->
         <div class="stats-section-new">
-            <div class="stat-card-new stat-blue-gradient">
+            <div class="stat-card-new">
                 <div class="stat-number-new" data-i18n="stat_schemes">500+</div>
                 <div class="stat-label-new" data-i18n="stat_schemes_label">Schemes</div>
             </div>
 
-            <div class="stat-card-new stat-green-gradient">
+            <div class="stat-card-new">
                 <div class="stat-number-new" data-i18n="stat_ai">AI</div>
                 <div class="stat-label-new" data-i18n="stat_ai_label">Powered</div>
             </div>
 
-            <div class="stat-card-new stat-blue2-gradient">
+            <div class="stat-card-new">
                 <div class="stat-number-new" data-i18n="stat_languages_new">12+</div>
-                <div class="stat-label-new" data-i18n="stat_languages_interactive">Languages, Interactive</div>
+                <div class="stat-label-new" data-i18n="stat_languages_interactive">Languages</div>
             </div>
         </div>
 
@@ -225,151 +218,231 @@
 
                 <div class="schemes-track" id="schemesTrack">
                     <!-- 1. Agriculture -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(20, 83, 45, 0.4) 0%, rgba(20, 83, 45, 0.9) 100%), linear-gradient(135deg, #22c55e, #14532d);">
-                        <div class="scheme-emoji">🌾</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M12 2L12 6M12 6C12 10 16 12 16 16H8C8 12 12 10 12 6Z" />
+                                <path d="M8 16V22H16V16" />
+                                <path d="M4 22H20" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_agriculture_count">818 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_agriculture_count">818 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_agriculture">Agriculture & Rural</div>
                         </div>
                     </div>
 
                     <!-- 2. Banking -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(30, 58, 138, 0.4) 0%, rgba(30, 58, 138, 0.9) 100%), linear-gradient(135deg, #3b82f6, #1e3a8a);">
-                        <div class="scheme-emoji">🏛️</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_banking_count">317 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_banking_count">317 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_banking">Banking & Finance</div>
                         </div>
                     </div>
 
                     <!-- 3. Business -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(124, 45, 18, 0.4) 0%, rgba(124, 45, 18, 0.9) 100%), linear-gradient(135deg, #f97316, #7c2d12);">
-                        <div class="scheme-emoji">🤝</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <rect x="2" y="7" width="20" height="14" rx="2" />
+                                <path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3" />
+                                <path d="M12 12v4" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_business_count">705 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_business_count">705 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_business">Business</div>
                         </div>
                     </div>
 
                     <!-- 4. Education -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(30, 64, 175, 0.4) 0%, rgba(30, 64, 175, 0.9) 100%), linear-gradient(135deg, #60a5fa, #1e40af);">
-                        <div class="scheme-emoji">🎓</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                                <path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_education_count">1076 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_education_count">1076 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_education">Education</div>
                         </div>
                     </div>
 
                     <!-- 5. Health -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(153, 27, 27, 0.4) 0%, rgba(153, 27, 27, 0.9) 100%), linear-gradient(135deg, #ef4444, #991b1b);">
-                        <div class="scheme-emoji">💚</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_health_count">274 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_health_count">274 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_health">Health</div>
                         </div>
                     </div>
 
                     <!-- 6. Housing -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(13, 148, 136, 0.4) 0%, rgba(13, 148, 136, 0.9) 100%), linear-gradient(135deg, #14b8a6, #0f766e);">
-                        <div class="scheme-emoji">🏠</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                <polyline points="9 22 9 12 15 12 15 22" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_housing_count">128 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_housing_count">128 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_housing">Housing</div>
                         </div>
                     </div>
 
                     <!-- 7. Public Safety -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(55, 65, 81, 0.4) 0%, rgba(55, 65, 81, 0.9) 100%), linear-gradient(135deg, #6b7280, #374151);">
-                        <div class="scheme-emoji">⚖️</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_public_safety_count">29 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_public_safety_count">29 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_public_safety">Public Safety</div>
                         </div>
                     </div>
 
                     <!-- 8. Science -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(67, 56, 202, 0.4) 0%, rgba(67, 56, 202, 0.9) 100%), linear-gradient(135deg, #6366f1, #4338ca);">
-                        <div class="scheme-emoji">⚛️</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10" />
+                                <path
+                                    d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_science_count">100 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_science_count">100 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_science">Science & IT</div>
                         </div>
                     </div>
 
                     <!-- 9. Skills -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(180, 83, 9, 0.4) 0%, rgba(180, 83, 9, 0.9) 100%), linear-gradient(135deg, #f59e0b, #b45309);">
-                        <div class="scheme-emoji">👥</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_skills_count">368 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_skills_count">368 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_skills">Skills</div>
                         </div>
                     </div>
 
                     <!-- 10. Social Welfare -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(190, 24, 93, 0.4) 0%, rgba(190, 24, 93, 0.9) 100%), linear-gradient(135deg, #ec4899, #be185d);">
-                        <div class="scheme-emoji">🧒</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path
+                                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_social_welfare_count">1456 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_social_welfare_count">1456 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_social_welfare">Social Welfare</div>
                         </div>
                     </div>
 
                     <!-- 11. Sports -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(194, 65, 12, 0.4) 0%, rgba(194, 65, 12, 0.9) 100%), linear-gradient(135deg, #f97316, #c2410c);">
-                        <div class="scheme-emoji">🎾</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                                <path d="M2 12h20" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_sports_count">248 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_sports_count">248 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_sports">Sports</div>
                         </div>
                     </div>
 
                     <!-- 12. Transport -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(185, 28, 28, 0.4) 0%, rgba(185, 28, 28, 0.9) 100%), linear-gradient(135deg, #ef4444, #b91c1c);">
-                        <div class="scheme-emoji">🚌</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <rect x="1" y="3" width="15" height="13" rx="2" />
+                                <path d="M16 8h4l3 4v5h-7V8z" />
+                                <circle cx="5.5" cy="18.5" r="2.5" />
+                                <circle cx="18.5" cy="18.5" r="2.5" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_transport_count">86 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_transport_count">86 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_transport">Transport</div>
                         </div>
                     </div>
 
                     <!-- 13. Travel -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(14, 116, 144, 0.4) 0%, rgba(14, 116, 144, 0.9) 100%), linear-gradient(135deg, #06b6d4, #0e7490);">
-                        <div class="scheme-emoji">🎭</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                <circle cx="12" cy="10" r="3" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_travel_count">91 Schemes</div>
-                            <div class="scheme-name" data-i18n="scheme_travel">Travel</div>
+                            <div class="scheme-count" data-i18n="scheme_travel_count">91 SCHEMES</div>
+                            <div class="scheme-name" data-i18n="scheme_travel">Travel & Tourism</div>
                         </div>
                     </div>
 
                     <!-- 14. Utility -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(75, 85, 99, 0.4) 0%, rgba(75, 85, 99, 0.9) 100%), linear-gradient(135deg, #9ca3af, #4b5563);">
-                        <div class="scheme-emoji">🔧</div>
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path
+                                    d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_utility_count">58 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_utility_count">58 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_utility">Utility</div>
                         </div>
                     </div>
 
-                    <!-- 15. Women -->
-                    <div class="scheme-card"
-                        style="background: linear-gradient(180deg, rgba(162, 28, 175, 0.4) 0%, rgba(162, 28, 175, 0.9) 100%), linear-gradient(135deg, #d946ef, #a21caf);">
-                        <div class="scheme-emoji">👶</div>
+                    <!-- 15. Women & Child -->
+                    <div class="scheme-card">
+                        <div class="scheme-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <circle cx="12" cy="5" r="3" />
+                                <path d="M12 22V8M9 12l3-2 3 2" />
+                                <path d="M5 17h14" />
+                            </svg>
+                        </div>
                         <div class="scheme-info">
-                            <div class="scheme-count" data-i18n="scheme_women_count">458 Schemes</div>
+                            <div class="scheme-count" data-i18n="scheme_women_count">458 SCHEMES</div>
                             <div class="scheme-name" data-i18n="scheme_women">Women & Child</div>
                         </div>
                     </div>
@@ -415,16 +488,8 @@
                 </div>
             </div>
 
-            <div class="chatbot-illustration">
-                <svg viewBox="0 0 200 200" width="120" height="120">
-                    <circle cx="100" cy="100" r="80" fill="#D1FAE5" />
-                    <rect x="60" y="70" width="80" height="60" rx="8" fill="#10B981" />
-                    <circle cx="80" cy="90" r="8" fill="white" />
-                    <circle cx="120" cy="90" r="8" fill="white" />
-                    <path d="M 70 110 Q 100 120 130 110" stroke="white" stroke-width="3" fill="none"
-                        stroke-linecap="round" />
-                </svg>
-            </div>
+            <!-- Chatbot Illustration Removed for Minimal Look -->
+            <div style="height: 60px;"></div>
         </div>
     </div>
 
@@ -434,6 +499,14 @@
             <!-- Header -->
             <div class="header">
                 <div class="logo-text">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="2" x2="12" y2="22" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                        <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
+                    </svg>
                     <span data-i18n="logo-text">Government Scheme Assistant</span>
                 </div>
                 <div class="header-right">
@@ -465,19 +538,7 @@
                         </div>
                     </div>
 
-                    <!-- Dark Mode Toggle (Chat) -->
-                    <button class="btn btn-icon btn-sm" onclick="toggleDarkMode()" title="Toggle theme">
-                        <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />
-                            <path
-                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                        </svg>
-                        <svg class="icon-moon hidden" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"
-                            stroke="none">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                        </svg>
-                    </button>
+
 
                     <div id="user-menu" class="user-menu hidden">
                         <span id="user-name-display" data-i18n="user-name-display"></span>

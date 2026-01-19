@@ -35,9 +35,24 @@ class Settings(BaseSettings):
         BASE_DIR / "backend" / "data" / "extracted"
     )
 
+    # LLM Model
+    LLM_MODEL: str = "gpt-4-turbo-preview"
+    
+    # RAG Configuration
+    TOP_K_RESULTS: int = 5
+    
+    # Application Configuration
+    APP_HOST: str = "0.0.0.0"
+    APP_PORT: int = 8000
+    DEBUG: bool = True
+    
+    # MyScheme Website
+    MYSCHEME_BASE_URL: str = "https://www.myscheme.gov.in"
+
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"  # Allow extra fields from .env
 
 
 # ✅ singleton

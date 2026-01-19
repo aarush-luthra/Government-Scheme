@@ -18,7 +18,7 @@
         body {
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
-            background: linear-gradient(135deg, #1e3a8a 0%, #10b981 100%);
+            background: #F3F4F6;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -30,7 +30,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: white;
+            color: #1e3a8a;
             text-decoration: none;
             font-size: 0.95rem;
             font-weight: 500;
@@ -69,7 +69,7 @@
             justify-content: center;
             gap: 10px;
             margin-bottom: 20px;
-            color: #1e3a8a;
+            color: #047857;
         }
 
         .auth-logo svg {
@@ -386,6 +386,88 @@
                 padding: 24px;
             }
         }
+
+        /* OCR Scanner Styles (Matched with Edit Profile) */
+        .ocr-section {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px dashed #10b981;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .ocr-section:hover {
+            border-color: #059669;
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .ocr-section h3 {
+            color: #10b981;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ocr-section-desc {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+
+        .btn-verify-scan {
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 999px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .btn-verify-scan:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .ocr-loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        #ocr-status {
+            font-size: 0.85rem;
+            color: #10b981;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
@@ -401,8 +483,13 @@
     <div class="auth-card">
         <div class="auth-header">
             <div class="auth-logo">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="2" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                    <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
                 </svg>
                 <span>GovScheme</span>
             </div>
@@ -414,6 +501,32 @@
         <div id="success-message" class="success-message"></div>
 
         <form id="signup-form">
+            <!-- OCR Scan to Auto-fill (Matched with Edit Profile UI) -->
+            <div class="ocr-section">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M9 9h6v6H9z" />
+                    </svg>
+                    Scan to Auto-fill
+                </h3>
+                <p class="ocr-section-desc">Upload one or more documents (PAN, Aadhaar, etc.) to automatically fill your
+                    details</p>
+                <button type="button" class="btn-verify-scan" onclick="triggerOCRFile()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    Upload Documents
+                </button>
+                <input type="file" id="ocr-file-input" style="display: none;" accept="image/*,.pdf" multiple
+                    onchange="handleOCRFile(event)">
+
+                <div id="ocr-loading" class="ocr-loading">
+                    <div class="spinner"></div>
+                    <span id="ocr-status">Processing document...</span>
+                </div>
+            </div>
+
             <!-- Account Details -->
             <div class="form-section">
                 <div class="section-label">Account Details</div>
@@ -637,8 +750,9 @@
 
     <script>
         // Generate age options
+        console.log('Generating age options 0-100');
         const ageOptions = document.getElementById('age-options');
-        for (let i = 18; i <= 100; i++) {
+        for (let i = 0; i <= 100; i++) {
             const opt = document.createElement('div');
             opt.className = 'custom-select-option';
             opt.textContent = i;
@@ -649,6 +763,124 @@
         function toggleSelect(selectId) {
             const select = document.getElementById(selectId);
             select.classList.toggle('open');
+        }
+
+        // OCR Scanner Logic
+        function triggerOCRFile() {
+            document.getElementById('ocr-file-input').click();
+        }
+
+        async function handleOCRFile(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            const loading = document.getElementById('ocr-loading');
+            const status = document.getElementById('ocr-status');
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            loading.style.display = 'flex';
+
+            let processedCount = 0;
+            let successCount = 0;
+            const totalFiles = files.length;
+
+            const processFile = async (file) => {
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    throw new Error(`${file.name}: File too large (Max 5MB)`);
+                }
+
+                status.textContent = `Processing ${file.name} (${processedCount + 1}/${totalFiles})...`;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/api/v1/ocr', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(`${file.name}: ${errData.detail || 'Processing failed'}`);
+                }
+
+                const result = await response.json();
+                processedCount++;
+
+                if (result.success && result.extracted_fields) {
+                    fillFormFromOCR(result.extracted_fields);
+                    successCount++;
+                } else {
+                    throw new Error(`${file.name}: Could not extract details`);
+                }
+            };
+
+            try {
+                // Process files sequentially to show clear status, or use Promise.allSettled for true parallel
+                // Sequentially is better for UX to show "Processing X of Y"
+                for (const file of files) {
+                    try {
+                        await processFile(file);
+                    } catch (fileError) {
+                        console.warn(fileError.message);
+                        // We continue with other files even if one fails
+                        const currentErrors = errorDiv.textContent ? errorDiv.textContent + "\n" : "";
+                        errorDiv.textContent = currentErrors + fileError.message;
+                        errorDiv.style.display = 'block';
+                    }
+                }
+
+                if (successCount > 0) {
+                    successDiv.textContent = `Successfully processed ${successCount} document(s) and auto-filled details!`;
+                    successDiv.style.display = 'block';
+                    setTimeout(() => successDiv.style.display = 'none', 5000);
+                }
+            } finally {
+                loading.style.display = 'none';
+                event.target.value = ''; // Reset input
+            }
+        }
+
+        function fillFormFromOCR(fields) {
+            if (fields.name) {
+                document.getElementById('name').value = fields.name;
+            }
+            if (fields.age) {
+                selectAge(fields.age);
+            }
+            if (fields.gender) {
+                const gender = fields.gender.toLowerCase();
+                const cards = document.querySelectorAll('#gender-selection .selection-card');
+                for (const card of cards) {
+                    if (card.dataset.value === gender) {
+                        selectGenderCard(card);
+                        break;
+                    }
+                }
+            }
+            if (fields.category) {
+                let category = fields.category.toLowerCase();
+                // Map common OCR results to form values
+                if (category.includes('general')) category = 'general';
+                else if (category.includes('obc')) category = 'obc';
+                else if (category.includes('sc')) category = 'sc';
+                else if (category.includes('st')) category = 'st';
+
+                const cards = document.querySelectorAll('#category-selection .category-card');
+                for (const card of cards) {
+                    if (card.dataset.value === category) {
+                        selectCategory(card);
+                        break;
+                    }
+                }
+            }
+            if (fields.annual_income) {
+                document.getElementById('annual_income').value = fields.annual_income;
+            }
         }
 
         function selectAge(age) {
@@ -748,11 +980,13 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    successDiv.textContent = 'Account created successfully! Redirecting to verification...';
+                    successDiv.textContent = 'Account created successfully! Redirecting...';
                     successDiv.style.display = 'block';
+                    // Store form data to potentially re-populate if needed (though we skip verification now)
                     sessionStorage.setItem('signupFormData', JSON.stringify(formData));
                     setTimeout(() => {
-                        window.location.href = '/?verify=true';
+                        // FIX: Redirect to chat/home directly so we don't ask for verification again
+                        window.location.href = '/?chat=true';
                     }, 1500);
                 } else {
                     let errorMessage = data.message || 'Sign up failed. Please try again.';
