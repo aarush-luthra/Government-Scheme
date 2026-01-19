@@ -2,8 +2,11 @@ from fastapi import FastAPI, HTTPException, Request, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
+import os
 import uuid
 from datetime import datetime
+# Fix for OpenMP runtime conflict on macOS
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
 from backend.rag.generator import generate_answer
