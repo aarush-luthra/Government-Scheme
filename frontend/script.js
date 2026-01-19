@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkAuthStatus() {
     try {
-        const response = await fetch('http://127.0.0.1:8000/auth/me', {
+        const response = await fetch('/auth/me', {
             credentials: 'include'
         });
         const data = await response.json();
@@ -85,6 +85,9 @@ async function checkAuthStatus() {
                 user_id: data.user_id
             };
             updateUIForLoggedInUser();
+        } else {
+            currentUser = null;
+            updateUIForAnonymousUser();
         }
     } catch (error) {
         console.error('Auth check failed:', error);
@@ -92,6 +95,8 @@ async function checkAuthStatus() {
 }
 
 function updateUIForLoggedInUser() {
+    if (!currentUser) return;
+
     const userMenu = document.getElementById('user-menu');
     const authButtons = document.getElementById('auth-buttons');
     const userNameDisplay = document.getElementById('user-name-display');
@@ -101,28 +106,25 @@ function updateUIForLoggedInUser() {
     const heroGuestButtons = document.getElementById('hero-guest-buttons');
     const heroLoggedinButtons = document.getElementById('hero-loggedin-buttons');
 
-    if (userMenu && authButtons && currentUser) {
-        userMenu.classList.remove('hidden');
-        authButtons.classList.add('hidden');
+    // Chat Header
+    if (userMenu) userMenu.classList.remove('hidden');
+    if (authButtons) authButtons.classList.add('hidden');
+    if (userNameDisplay) {
         const greeting = (window.TRANSLATIONS && window.TRANSLATIONS[currentLanguage] && window.TRANSLATIONS[currentLanguage]['greeting_hello']) || 'Hello';
         userNameDisplay.textContent = `${greeting}, ${currentUser.name}`;
     }
 
-    // Show navbar user menu with logout button on landing page
-    if (navbarUserMenu && navbarSigninBtn && currentUser) {
-        navbarSigninBtn.style.display = 'none';
-        navbarUserMenu.classList.remove('hidden');
-        if (navbarUserName) {
-            const greeting = (window.TRANSLATIONS && window.TRANSLATIONS[currentLanguage] && window.TRANSLATIONS[currentLanguage]['greeting_hello']) || 'Hello';
-            navbarUserName.textContent = `${greeting}, ${currentUser.name}`;
-        }
+    // Navbar
+    if (navbarSigninBtn) navbarSigninBtn.style.display = 'none';
+    if (navbarUserMenu) navbarUserMenu.classList.remove('hidden');
+    if (navbarUserName) {
+        const greeting = (window.TRANSLATIONS && window.TRANSLATIONS[currentLanguage] && window.TRANSLATIONS[currentLanguage]['greeting_hello']) || 'Hello';
+        navbarUserName.textContent = `${greeting}, ${currentUser.name}`;
     }
 
-    // Toggle hero buttons: hide guest buttons, show logged-in button
-    if (heroGuestButtons && heroLoggedinButtons && currentUser) {
-        heroGuestButtons.classList.add('hidden');
-        heroLoggedinButtons.classList.remove('hidden');
-    }
+    // Hero
+    if (heroGuestButtons) heroGuestButtons.classList.add('hidden');
+    if (heroLoggedinButtons) heroLoggedinButtons.classList.remove('hidden');
 
     const responseLimitBanner = document.getElementById('response-limit-banner');
     if (responseLimitBanner) {
@@ -135,25 +137,22 @@ function updateUIForAnonymousUser() {
     const authButtons = document.getElementById('auth-buttons');
     const navbarSigninBtn = document.getElementById('navbar-signin-btn');
     const navbarUserMenu = document.getElementById('navbar-user-menu');
+    const navbarUserName = document.getElementById('navbar-user-name');
     const heroGuestButtons = document.getElementById('hero-guest-buttons');
     const heroLoggedinButtons = document.getElementById('hero-loggedin-buttons');
 
-    if (userMenu && authButtons) {
-        userMenu.classList.add('hidden');
-        authButtons.classList.remove('hidden');
-    }
+    // Chat Header
+    if (userMenu) userMenu.classList.add('hidden');
+    if (authButtons) authButtons.classList.remove('hidden');
 
-    // Show sign in button, hide user menu on landing page
-    if (navbarSigninBtn && navbarUserMenu) {
-        navbarSigninBtn.style.display = '';
-        navbarUserMenu.classList.add('hidden');
-    }
+    // Navbar
+    if (navbarSigninBtn) navbarSigninBtn.style.display = '';
+    if (navbarUserMenu) navbarUserMenu.classList.add('hidden');
+    if (navbarUserName) navbarUserName.textContent = '';
 
-    // Show guest buttons, hide logged-in button on hero
-    if (heroGuestButtons && heroLoggedinButtons) {
-        heroGuestButtons.classList.remove('hidden');
-        heroLoggedinButtons.classList.add('hidden');
-    }
+    // Hero
+    if (heroGuestButtons) heroGuestButtons.classList.remove('hidden');
+    if (heroLoggedinButtons) heroLoggedinButtons.classList.add('hidden');
 }
 
 // ============ Theme Management ============
@@ -642,6 +641,13 @@ function scrollCarousel(direction) {
 function startChat() {
     document.getElementById('landing-page').classList.add('hidden');
     document.getElementById('chat-page').classList.remove('hidden');
+
+    // Sync UI state
+    if (currentUser) {
+        updateUIForLoggedInUser();
+    } else {
+        updateUIForAnonymousUser();
+    }
 }
 
 function continueAsGuest() {
@@ -1280,7 +1286,7 @@ async function submitSignIn() {
     showLoading(true);
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/auth/login', {
+        const response = await fetch('/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1355,7 +1361,7 @@ async function sendMessage() {
     input.value = "";
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/chat", {
+        const response = await fetch("/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
