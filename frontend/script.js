@@ -514,7 +514,7 @@ function updateAgeDropdown(langCode) {
     optionsContainer.appendChild(placeholderOption);
 
     // 6. Loop to create options
-    for (let i = 18; i <= 100; i++) {
+    for (let i = 0; i <= 100; i++) {
         const option = document.createElement('div');
         option.className = 'custom-select-option';
         option.dataset.value = i;
@@ -698,6 +698,7 @@ async function openSchemeFinderModal(mode = 'signup') {
         // Change Button Text & Action
         // Use innerHTML to preserve any potential spans/icons
         submitBtn.innerHTML = "<span>Edit Profile & Continue Chat</span>";
+        submitBtn.removeAttribute('onclick'); // Remove HTML onclick attribute
         submitBtn.onclick = submitEditProfile; // Re-bind to the edit function
 
         // Fetch Data
@@ -1420,7 +1421,99 @@ function addMessage(sender, text, className, sources = null) {
     `;
 
     chatBox.appendChild(msgDiv);
+
+    // Add quick action buttons after bot messages
+    if (className === "bot" && text.length > 50) {
+        // Extract scheme names from the response for contextual buttons
+        const schemeNames = extractSchemeNamesFromResponse(text);
+
+        // Detect if this is a greeting response (no schemes mentioned)
+        const isGreeting = schemeNames.length === 0 ||
+            text.toLowerCase().includes("welcome") ||
+            text.toLowerCase().includes("hello") ||
+            text.toLowerCase().includes("namaste") ||
+            text.includes("स्वागत") ||
+            text.includes("नमस्ते");
+
+        // Get translations for current language
+        const t = window.TRANSLATIONS && window.TRANSLATIONS[currentLanguage] ? window.TRANSLATIONS[currentLanguage] : {};
+
+        const quickActionsDiv = document.createElement("div");
+        quickActionsDiv.className = "quick-actions";
+
+        // Translated labels with fallbacks
+        const labelText = t.qa_label || "Quick Actions:";
+        const findSchemesText = t.qa_find_schemes || "Find My Schemes";
+        const browseCategoriesText = t.qa_browse_categories || "Browse Categories";
+        const helpText = t.qa_help || "Help";
+        const moreAboutText = t.qa_more_about || "More about";
+        const moreSchemesText = t.qa_more_schemes || "More Schemes";
+        const howToApplyText = t.qa_how_to_apply || "How to Apply";
+
+        let buttonsHtml = `<div class="quick-actions-label">${labelText}</div><div class="quick-actions-buttons">`;
+
+        if (isGreeting && schemeNames.length === 0) {
+            // Greeting buttons - help user get started
+            buttonsHtml += `<button class="quick-action-btn" onclick="sendQuickAction('Show me schemes I am eligible for')">${findSchemesText}</button>`;
+            buttonsHtml += `<button class="quick-action-btn" onclick="sendQuickAction('What categories of schemes are available?')">${browseCategoriesText}</button>`;
+            buttonsHtml += `<button class="quick-action-btn" onclick="sendQuickAction('How does this work?')">${helpText}</button>`;
+        } else {
+            // Scheme response buttons
+            // Add "Tell me more" button for first scheme mentioned
+            if (schemeNames.length > 0) {
+                const shortName = schemeNames[0].substring(0, 15) + (schemeNames[0].length > 15 ? '...' : '');
+                buttonsHtml += `<button class="quick-action-btn" onclick="sendQuickAction('Tell me more about ${schemeNames[0]}')">${moreAboutText} ${shortName}</button>`;
+            }
+
+            // Add general quick actions
+            buttonsHtml += `<button class="quick-action-btn" onclick="sendQuickAction('Show me more schemes')">${moreSchemesText}</button>`;
+            buttonsHtml += `<button class="quick-action-btn" onclick="sendQuickAction('How do I apply for these schemes?')">${howToApplyText}</button>`;
+        }
+
+        buttonsHtml += '</div>';
+        quickActionsDiv.innerHTML = buttonsHtml;
+
+        chatBox.appendChild(quickActionsDiv);
+    }
+
     chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Extract scheme names from bot response text
+function extractSchemeNamesFromResponse(text) {
+    const schemeNames = [];
+    // Look for patterns like [Scheme Name] or **[Scheme Name]**
+    const patterns = [
+        /\[([^\]]+)\]/g,  // [Scheme Name] - simple brackets
+        /\*\*\[([^\]]+)\]\*\*/g,  // **[Scheme Name]**
+        /\*\*([^*\n]+)\*\*\s*\n/g,  // **Scheme Name** at start of line
+    ];
+
+    for (const pattern of patterns) {
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            const name = match[1].trim();
+            // Filter out common non-scheme text
+            if (name.length > 3 && name.length < 100 &&
+                !schemeNames.includes(name) &&
+                !name.toLowerCase().includes('why you') &&
+                !name.toLowerCase().includes('benefit') &&
+                !name.toLowerCase().includes('how to')) {
+                schemeNames.push(name);
+            }
+        }
+    }
+
+    return schemeNames.slice(0, 3); // Max 3 schemes
+}
+
+// Send quick action as a message
+function sendQuickAction(message) {
+    const input = document.getElementById("user-input");
+    if (input) {
+        input.value = message;
+        sendMessage();
+    }
 }
 
 function disableChat() {

@@ -339,6 +339,8 @@ async def update_profile(req: ProfileUpdateRequest, request: Request):
     
     # Update fields if provided
     update_data = req.model_dump(exclude_unset=True)
+    if "email" in update_data:
+        del update_data["email"]  # Prevent duplicate argument error
     success = db.update_user(session["email"], **update_data)
     
     if not success:
@@ -484,6 +486,107 @@ async def batch_translate(req: BatchTranslateRequest):
         raise HTTPException(status_code=500, detail="Batch translation failed")
 
 
+# ============ Intent Detection for Conversational Flow ============
+GREETING_PATTERNS = [
+    "hi", "hello", "hey", "hii", "hiii", "namaste", "namaskar", "good morning",
+    "good afternoon", "good evening", "howdy", "greetings", "sup", "yo",
+    "thanks", "thank you", "धन्यवाद", "शुक्रिया", "नमस्ते", "नमस्कार",
+    "ಹಲೋ", "வணக்கம்", "నమస్తే", "হ্যালো", "ਸਤ ਸ੍ਰੀ ਅਕਾਲ"
+]
+
+GREETING_RESPONSES = [
+    "Hello! I'm your Government Scheme Assistant. How can I help you today?\n\nYou can ask me:\n- What schemes am I eligible for?\n- Tell me about education scholarships\n- Schemes for farmers in my state",
+    "Namaste! Welcome to the Government Scheme Assistant.\n\nI can help you find government schemes based on your profile. What would you like to know?",
+    "Hi there! I'm here to help you discover government schemes you may be eligible for.\n\nTry asking: \"What schemes am I eligible for?\" or tell me about a specific category like health, education, or agriculture."
+]
+
+def detect_intent(message: str) -> str:
+    """
+    Detect the intent of the user message.
+    Returns: 'greeting', 'thanks', 'help', 'scheme_detail', 'scheme_query'
+    """
+    msg_lower = message.strip().lower()
+    
+    # Short greetings (under 15 chars, no question words)
+    if len(msg_lower) < 15 and any(g in msg_lower for g in GREETING_PATTERNS[:14]):
+        return "greeting"
+    
+    # Thank you messages
+    if any(t in msg_lower for t in ["thank", "thanks", "धन्यवाद", "शुक्रिया"]):
+        return "thanks"
+    
+    # Help requests
+    if msg_lower in ["help", "?", "what can you do", "how to use"]:
+        return "help"
+    
+    # Scheme detail requests - "tell me more about X", "details about X", "what is X scheme"
+    # Scheme detail requests
+    detail_patterns = [
+        "tell me more about", "tell me about", "more about", "details about",
+        "more info on", "more information about", "explain", "what is the",
+        "describe", "elaborate on", "info about", "information on",
+        "details of", "scheme for", "yojana"
+    ]
+    if any(pattern in msg_lower for pattern in detail_patterns):
+        return "scheme_detail"
+    
+    # Heuristic: If message looks like a specific scheme name (Title Case, 3-15 words)
+    # e.g., "National Agriculture Insurance Scheme"
+    word_count = len(message.split())
+    if 3 <= word_count <= 15 and message[0].isupper():
+        # Check if it has specific scheme keywords
+        if any(w in msg_lower for w in ["scheme", "yojana", "mission", "program", "fund", "allowance", "subsidy"]):
+            return "scheme_detail"
+            
+    # Default: scheme query
+    return "scheme_query"
+
+
+def extract_scheme_name(message: str) -> str:
+    """
+    Extract the scheme name from a detail request message.
+    E.g., "tell me more about Feed The Seed" -> "Feed The Seed"
+    """
+    msg_lower = message.lower()
+    
+    # List of patterns to remove (keeping what comes after)
+    patterns_to_remove = [
+        "tell me more about the ", "tell me more about ",
+        "tell me about the ", "tell me about ",
+        "more about the ", "more about ",
+        "details about the ", "details about ",
+        "details of the ", "details of ",
+        "more info on the ", "more info on ",
+        "more information about the ", "more information about ",
+        "explain the ", "explain ",
+        "what is the ", "what is ",
+        "describe the ", "describe ",
+        "elaborate on the ", "elaborate on ",
+        "info about the ", "info about ",
+        "information on the ", "information on "
+    ]
+    
+    result = message
+    matched_pattern = False
+    for pattern in patterns_to_remove:
+        if msg_lower.startswith(pattern):
+            result = message[len(pattern):]
+            matched_pattern = True
+            break
+            
+    # If no intro pattern matched, but it was detected as scheme detail, 
+    # assume the whole message is likely the scheme name (or close to it)
+    if not matched_pattern:
+        result = message
+    
+    # Clean up trailing words like "scheme", "yojana" ONLY if they are at the very end and likely part of a question
+    # But usually scheme names contain these words, so be careful. 
+    # Just trim whitespace and punctuation.
+    result = result.strip().strip("?.!,")
+    
+    return result
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     """
@@ -538,8 +641,69 @@ async def chat(req: ChatRequest):
         else:
             english_message = req.message
         
+        # Step 2.5: Intent Detection - Handle greetings/thanks without RAG
+        import random
+        intent = detect_intent(english_message)
+        
+        if intent == "greeting":
+            reply = random.choice(GREETING_RESPONSES)
+            # Add user name if available
+            if user_profile and user_profile.get("fullName"):
+                name = user_profile["fullName"].split()[0]
+                reply = reply.replace("Hello!", f"Hello, {name}!")
+                reply = reply.replace("Namaste!", f"Namaste, {name}!")
+                reply = reply.replace("Hi there!", f"Hi {name}!")
+            
+            logger.info("Detected greeting intent - responding without RAG")
+            
+            # Translate greeting response if needed
+            if target_lang != "en_XX":
+                reply = translator.from_english(reply, target_lang)
+            
+            return ChatResponse(
+                reply=reply,
+                detected_language=detected_lang,
+                language_name=language_name,
+                original_message=original_message,
+                translated_message=None
+            )
+        
+        if intent == "thanks":
+            reply = "You're welcome! Feel free to ask if you have more questions about government schemes."
+            if target_lang != "en_XX":
+                reply = translator.from_english(reply, target_lang)
+            return ChatResponse(
+                reply=reply,
+                detected_language=detected_lang,
+                language_name=language_name,
+                original_message=original_message,
+                translated_message=None
+            )
+        
+        # Step 2.6: Handle scheme detail requests - retrieve all info about a specific scheme
+        if intent == "scheme_detail":
+            scheme_name = extract_scheme_name(english_message)
+            logger.info(f"Detected scheme detail intent for: {scheme_name}")
+            
+            # Search specifically for this scheme by name
+            docs = retriever.search(scheme_name, k=10)
+            
+            # Filter to only docs that match this scheme name
+            filtered_docs = []
+            for doc in docs:
+                doc_title = doc.metadata.get("title", "").lower()
+                if scheme_name.lower() in doc_title or doc_title in scheme_name.lower():
+                    filtered_docs.append(doc)
+            
+            # If we found matching docs, use them; otherwise use all retrieved docs
+            if filtered_docs:
+                docs = filtered_docs
+                logger.info(f"Found {len(docs)} chunks specifically for scheme: {scheme_name}")
+            else:
+                logger.info(f"No exact match, using top {len(docs)} relevant docs")
+        
         # Step 3: Retrieve relevant documents using profile-aware search
-        if user_profile:
+        elif user_profile:
             # Use profile-based multi-query search for better eligibility matching
             docs = retriever.search_by_profile(user_profile, k=8)
             logger.info(f"Profile-based search returned {len(docs)} documents")
@@ -556,7 +720,22 @@ async def chat(req: ChatRequest):
                 merged_history.append({"role": "assistant", "content": entry["answer"]})
         
         # Step 4: Generate answer with strict eligibility checking
-        context = "\n\n---\n\n".join([doc.page_content for doc in docs])
+        # Build context with scheme links from metadata
+        context_parts = []
+        for doc in docs:
+            content = doc.page_content
+            # Append links from metadata if available
+            official_site = doc.metadata.get("official_site", "")
+            apply_link = doc.metadata.get("apply_link", "")
+            if official_site or apply_link:
+                content += "\n\nSCHEME LINKS:"
+                if official_site:
+                    content += f"\n- Official Website: {official_site}"
+                if apply_link:
+                    content += f"\n- Apply Online: {apply_link}"
+            context_parts.append(content)
+        
+        context = "\n\n---\n\n".join(context_parts)
         reply = generate_answer(
             user_question=english_message,
             context=context,

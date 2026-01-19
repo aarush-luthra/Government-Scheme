@@ -744,8 +744,9 @@
 
     <script>
         // Generate age options
+        console.log('Generating age options 0-100');
         const ageOptions = document.getElementById('age-options');
-        for (let i = 18; i <= 100; i++) {
+        for (let i = 0; i <= 100; i++) {
             const opt = document.createElement('div');
             opt.className = 'custom-select-option';
             opt.textContent = i;

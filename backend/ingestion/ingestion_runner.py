@@ -13,17 +13,46 @@ from backend.ingestion.normalizer import normalize_scheme
 from backend.ingestion.chunker import chunk_scheme
 from backend.rag.embeddings import EmbeddingGenerator
 from backend.rag.vector_store import VectorStore
+from backend.rag.scheme_links_loader import load_scheme_links, get_scheme_links
 from backend.config.settings import RAW_DATA_DIR
+
+
+def merge_scheme_links(schemes: list) -> list:
+    """
+    Merge official_site and apply_link from scheme_links.json into each scheme.
+    """
+    # Load the links lookup
+    links_lookup = load_scheme_links()
+    
+    merged_count = 0
+    for scheme in schemes:
+        title = scheme.get("title", "")
+        official, apply_link = get_scheme_links(title)
+        
+        if official:
+            scheme["official_site"] = official
+            merged_count += 1
+        else:
+            scheme["official_site"] = ""
+        
+        if apply_link:
+            scheme["apply_link"] = apply_link
+        else:
+            scheme["apply_link"] = ""
+    
+    print(f"   Merged links for {merged_count} schemes (out of {len(schemes)})")
+    return schemes
 
 
 def run_ingestion(limit=None):
     """
     Run the full ingestion pipeline:
     1. Load schemes from JSON files in backend/data/schemes_json/
-    2. Normalize to consistent format
-    3. Chunk into documents (eligibility-focused)
-    4. Generate embeddings
-    5. Store in vector database
+    2. Merge scheme links from scheme_links.json
+    3. Normalize to consistent format
+    4. Chunk into documents (eligibility-focused)
+    5. Generate embeddings
+    6. Store in vector database
     """
     print("=" * 60)
     print("Government Scheme Ingestion Pipeline")
@@ -36,6 +65,10 @@ def run_ingestion(limit=None):
     if not schemes:
         print("[ERROR] No schemes loaded. Check data directory.")
         return
+    
+    # Merge scheme links from scheme_links.json
+    print("\n[INFO] Merging scheme links...")
+    schemes = merge_scheme_links(schemes)
     
     # Save raw data for debugging
     os.makedirs(RAW_DATA_DIR, exist_ok=True)
