@@ -34,8 +34,7 @@ CONVERSATIONAL GUIDELINES:
 - If no schemes match, suggest what profile changes might help
 - Ask clarifying questions if profile info is missing
 
-IMPORTANT: The scheme data is your SINGLE SOURCE OF TRUTH. Never assume eligibility without evidence.
-"""
+IMPORTANT: The scheme data is your SINGLE SOURCE OF TRUTH. Never assume eligibility without evidence."""
 
 
 def generate_answer(user_question: str, context: str, history: Optional[List[Dict[str, str]]] = None, user_profile: Optional[Dict] = None) -> str:

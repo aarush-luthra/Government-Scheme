@@ -703,10 +703,27 @@ async def chat(req: ChatRequest):
                 logger.info(f"No exact match, using top {len(docs)} relevant docs")
         
         # Step 3: Retrieve relevant documents using profile-aware search
-        elif user_profile:
+        if user_profile:
             # Use profile-based multi-query search for better eligibility matching
             docs = retriever.search_by_profile(user_profile, k=8)
             logger.info(f"Profile-based search returned {len(docs)} documents")
+            
+            # Rank and filter documents using Penalty-based matching
+            from backend.rag.scheme_matcher import SchemeMatcher
+            ranked_results = SchemeMatcher.rank_schemes(user_profile, docs)
+            
+            # Log results of ranking
+            logger.info(f"After ranking/filtering: {len(ranked_results)} schemes remain")
+            
+            # Extract docs and add confidence/reasons to content for LLM
+            filtered_docs = []
+            for doc, confidence, reasons in ranked_results[:8]:
+                # Enhance page content with matching info to help LLM
+                reasons_str = "\n".join(reasons)
+                doc.page_content = f"CONFIDENCE SCORE: {confidence:.2f}\nMATCHING ANALYSIS:\n{reasons_str}\n\n{doc.page_content}"
+                filtered_docs.append(doc)
+            
+            docs = filtered_docs
         else:
             # Standard query search
             docs = retriever.search(english_message, k=6)

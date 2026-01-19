@@ -5,8 +5,8 @@ import json
 import os
 import sys
 
-# Add backend to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from backend.ingestion.loaders.json_scheme_loader import JSONSchemeLoader
 from backend.ingestion.normalizer import normalize_scheme
