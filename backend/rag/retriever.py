@@ -1,35 +1,31 @@
 """
-Vector Store Retriever - FAISS-based retrieval for government schemes.
+Vector Store Retriever - FAISS-based retrieval with Eligibility Filtering.
 """
 from backend.rag.embeddings import EmbeddingGenerator
 from backend.rag.vector_store import VectorStore
+from backend.rag.scheme_matcher import SchemeMatcher  # ✅ Import the matcher
 from typing import List, Dict, Optional
 from langchain_core.documents import Document
 
 
 class VectorStoreRetriever:
     """
-    Retriever for searching government schemes in the FAISS vector store.
-    Supports both general similarity search and profile-based filtering.
+    Retriever for searching government schemes.
+    Includes re-ranking to enforce State/Disability/Income/Age hard filters.
     """
     
     def __init__(self):
         self.embedder = EmbeddingGenerator()
         self.vectorstore = VectorStore()
-        print(" VectorStoreRetriever initialized")
+        print("[INFO] VectorStoreRetriever initialized")
 
     def search(self, query: str, k: int = 4) -> List[Document]:
         """Basic similarity search."""
-        # Get query embedding
         query_embedding = self.embedder.embed_query(query)
-        
-        # Search vector store
         results = self.vectorstore.search(query_embedding, k=k)
         
-        # Convert to Document objects
         documents = []
         for result in results:
-            # Add distance to metadata so it's preserved
             metadata = result['metadata'].copy()
             metadata['distance'] = result['distance']
             
@@ -39,58 +35,16 @@ class VectorStoreRetriever:
             )
             documents.append(doc)
         
-        # Log retrieved documents
-        print(f"\n[RETRIEVER] Retrieved {len(documents)} documents for query: '{query}'")
-        for i, doc in enumerate(documents):
-            # Fallback to 'title' if 'scheme_name' is missing
-            scheme_name = doc.metadata.get('scheme_name') or doc.metadata.get('title') or 'Unknown'
-            print(f"   {i+1}. {scheme_name} (Score: {doc.metadata.get('distance', 0):.4f})")
-            
         return documents
     
-    def search_with_filter(self, query: str, filter_dict: Dict, k: int = 4) -> List[Document]:
-        """
-        Search with metadata filtering.
-        Note: FAISS doesn't support native filtering, so we filter post-search.
-        """
-        # Get more results than needed to allow for filtering
-        docs = self.search(query, k=k * 3)
-        
-        # Filter by metadata
-        filtered = []
-        for doc in docs:
-            match = True
-            for key, value in filter_dict.items():
-                if doc.metadata.get(key) != value:
-                    match = False
-                    break
-            if match:
-                filtered.append(doc)
-        
-        return filtered[:k]
-    
-    def search_eligibility(self, query: str, k: int = 6) -> List[Document]:
-        """
-        Search specifically for eligibility-type documents.
-        """
-        return self.search_with_filter(
-            query,
-            filter_dict={"chunk_type": "eligibility"},
-            k=k
-        )
-    
     def search_multi_query(self, queries: List[str], k_per_query: int = 2) -> List[Document]:
-        """
-        Search using multiple queries and deduplicate results.
-        Useful for profile-based search with multiple characteristics.
-        """
+        """Search using multiple queries and deduplicate results."""
         all_docs = []
         seen_content = set()
         
         for query in queries:
             docs = self.search(query, k=k_per_query)
             for doc in docs:
-                # Deduplicate by content hash
                 content_hash = hash(doc.page_content[:200])
                 if content_hash not in seen_content:
                     seen_content.add(content_hash)
@@ -98,25 +52,42 @@ class VectorStoreRetriever:
         
         return all_docs
     
-    def search_by_profile(self, user_profile: Dict, k: int = 8) -> List[Document]:
+    def search_by_profile(self, user_profile: Dict, k: int = 5) -> List[Document]:
         """
-        Search for schemes based on user profile characteristics.
-        Generates multiple queries based on profile and aggregates results.
-        """
-        from backend.rag.scheme_matcher import SchemeMatcher
+        Search for schemes based on user profile AND filter by eligibility.
         
-        # Generate search queries from profile
+        Process:
+        1. Generate Queries (SchemeMatcher)
+        2. Vector Search (FAISS) -> High Recall
+        3. Re-Rank & Filter (SchemeMatcher) -> High Precision
+        """
+        # 1. Generate search queries from profile
         queries = SchemeMatcher.extract_search_queries(user_profile)
         
-        # Run multi-query search
-        docs = self.search_multi_query(queries, k_per_query=3)
+        # 2. Run multi-query search (Fetch 3x candidates to allow for Hard Filtering)
+        raw_docs = self.search_multi_query(queries, k_per_query=3)
         
-        # If not enough results, add a general search
-        if len(docs) < k:
+        # Fallback: If not enough results, add a general search
+        if len(raw_docs) < k:
             general_docs = self.search("government scheme eligibility benefits", k=4)
             for doc in general_docs:
                 content_hash = hash(doc.page_content[:200])
-                if content_hash not in {hash(d.page_content[:200]) for d in docs}:
-                    docs.append(doc)
+                if content_hash not in {hash(d.page_content[:200]) for d in raw_docs}:
+                    raw_docs.append(doc)
         
-        return docs[:k * 2]  # Return more docs for ranking later
+        # 3. RE-RANKING & FILTERING (The Logic Step)
+        # This applies your State, Disability, Income, Age, Category rules
+        ranked_results = SchemeMatcher.rank_schemes(user_profile, raw_docs)
+        
+        final_docs = []
+        print(f"\n[RETRIEVER] Re-ranking {len(raw_docs)} schemes for user profile...")
+        
+        for doc, confidence, reasons in ranked_results[:k]:
+            # Store logic results in metadata so LLM can explain "Why You're Eligible"
+            doc.metadata['match_confidence'] = confidence
+            doc.metadata['eligibility_reasons'] = "\n".join(reasons)
+            
+            final_docs.append(doc)
+            print(f"   -> Selected: {doc.metadata.get('scheme_name')} (Conf: {confidence:.2f})")
+            
+        return final_docs
