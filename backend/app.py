@@ -580,7 +580,8 @@ async def chat(req: ChatRequest):
         # Note: The retriever now handles SchemeMatcher ranking internally
         if user_profile:
             logger.info(f"Searching with profile constraints for user: {req.user_id or 'Guest'}")
-            docs = retriever.search_by_profile(user_profile, k=8)
+            # Pass the user's ACTUAL query (english_message) so the retriever can find what they asked for!
+            docs = retriever.search_by_profile(user_profile, query=english_message, k=20)
         else:
             # Standard search if no profile available
             docs = retriever.search(english_message, k=6)

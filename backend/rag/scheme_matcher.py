@@ -294,9 +294,9 @@ class SchemeMatcher:
                 user_profile, doc.metadata
             )
             
-            # Only keep if eligible (Hard Filters passed) AND confidence > 0
-            if is_eligible and confidence > 0.0:
-                ranked.append((doc, confidence, reasons))
+            # Default behavior: Keep everything, just rank lower if ineligible
+            # This allows the LLM to see "Why it wasn't valid" and explain it
+            ranked.append((doc, confidence, reasons))
         
         # Sort by confidence descending
         ranked.sort(key=lambda x: x[1], reverse=True)

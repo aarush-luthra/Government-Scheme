@@ -52,17 +52,21 @@ class VectorStoreRetriever:
         
         return all_docs
     
-    def search_by_profile(self, user_profile: Dict, k: int = 5) -> List[Document]:
+    def search_by_profile(self, user_profile: Dict, query: Optional[str] = None, k: int = 20) -> List[Document]:
         """
         Search for schemes based on user profile AND filter by eligibility.
         
         Process:
-        1. Generate Queries (SchemeMatcher)
+        1. Generate Queries (SchemeMatcher) + User Query
         2. Vector Search (FAISS) -> High Recall
         3. Re-Rank & Filter (SchemeMatcher) -> High Precision
         """
         # 1. Generate search queries from profile
         queries = SchemeMatcher.extract_search_queries(user_profile)
+        
+        # Add the explicit user query if provided
+        if query:
+            queries.insert(0, query)  # Prioritize user query
         
         # 2. Run multi-query search (Fetch 3x candidates to allow for Hard Filtering)
         raw_docs = self.search_multi_query(queries, k_per_query=3)
