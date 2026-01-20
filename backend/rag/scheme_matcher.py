@@ -164,6 +164,22 @@ class SchemeMatcher:
                     confidence -= 0.4
                     is_eligible = False
         
+        # Disability/Student status
+        for field, label in [("is_disabled", "Disability"), ("is_student", "Student")]:
+            user_val = user_profile.get(field)
+            scheme_req = scheme_metadata.get(field)
+            if scheme_req and not user_val:
+                # If occupation is student/college_student, count as student
+                if field == "is_student" and (user_profile.get("employment_status") in ["student", "college_student"]):
+                    matches.append(f"{label} requirement matches (via occupation)")
+                    confidence += 0.2
+                else:
+                    mismatches.append(f"Scheme requires {label} status")
+                    confidence -= 0.3
+            elif scheme_req and user_val:
+                matches.append(f"{label} requirement matches")
+                confidence += 0.2
+
         # Gender Check
         user_gender = (user_profile.get("gender") or "").lower()
         scheme_gender = (scheme_metadata.get("gender") or "").lower()

@@ -177,6 +177,7 @@ const TRANSLATIONS = {
         "sf_emp_unemp": "बेरोजगार",
 
         "sf_emp_self": "स्व-रोजगार",
+        "sf_emp_college": "कॉलेज छात्र",
 
         "sf_lbl_govt": "सरकारी कर्मचारी?",
 
@@ -482,6 +483,7 @@ const TRANSLATIONS = {
         "sf_emp_unemp": "வேலையில்லாதவர்",
 
         "sf_emp_self": "சுயதொழில்",
+        "sf_emp_college": "கல்லூரி மாணவர்",
 
         "sf_lbl_govt": "அரசு ஊழியரா?",
 
@@ -766,6 +768,7 @@ const TRANSLATIONS = {
         "sf_emp_unemp": "నిరుద్యోగి",
 
         "sf_emp_self": "స్వయం ఉపాధి",
+        "sf_emp_college": "కళాశాల విద్యార్థి",
 
         "sf_lbl_govt": "ప్రభుత్వ ఉద్యోగా?",
 
