@@ -665,10 +665,11 @@
                 <div class="section-label">Employment & Income</div>
                 <div class="form-group">
                     <label for="employment_status">Employment Status</label>
-                    <select id="employment_status" name="employment_status">
+                    <select id="employment_status" name="employment_status" onchange="handleEmploymentChange(this)">
                         <option value="">Select</option>
                         <option value="farmer">Farmer</option>
                         <option value="student">Student</option>
+                        <option value="college_student">College Student</option>
                         <option value="worker">Worker</option>
                         <option value="homemaker">Homemaker</option>
                         <option value="self_employed">Self Employed</option>
@@ -911,6 +912,17 @@
             container.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
             document.getElementById(fieldId).value = btn.dataset.value;
+        }
+
+        function handleEmploymentChange(select) {
+            const val = select.value;
+            if (val === 'student' || val === 'college_student') {
+                const studentSelection = document.getElementById('student-selection');
+                if (studentSelection) {
+                    const yesBtn = studentSelection.querySelector('[data-value="true"]');
+                    if (yesBtn) selectToggle(yesBtn, 'is_student');
+                }
+            }
         }
 
         // Close dropdowns when clicking outside
