@@ -1,0 +1,24 @@
+{
+  "profiles": [
+    {
+      "name": "Student Profile",
+      "latency": 2.7500550746917725,
+      "precision": 1.0,
+      "docs_retrieved": 10
+    },
+    {
+      "name": "Farmer Profile",
+      "latency": 2.6528568267822266,
+      "precision": 1.0,
+      "docs_retrieved": 8
+    },
+    {
+      "name": "Senior Citizen Profile",
+      "latency": 2.5502262115478516,
+      "precision": 1.0,
+      "docs_retrieved": 9
+    }
+  ],
+  "overall_precision": 1.0,
+  "overall_latency": 2.65104603767395
+}

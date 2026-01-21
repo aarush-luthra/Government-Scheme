@@ -39,3 +39,4 @@ pdf2image>=1.16.0
 easyocr>=1.7.0
 numpy>=1.24.0
 python-multipart>=0.0.21
+matplotlib>=3.8.0
