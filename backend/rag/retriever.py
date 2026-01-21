@@ -92,6 +92,7 @@ class VectorStoreRetriever:
             doc.metadata['eligibility_reasons'] = "\n".join(reasons)
             
             final_docs.append(doc)
-            print(f"   -> Selected: {doc.metadata.get('scheme_name')} (Conf: {confidence:.2f})")
+            title = doc.metadata.get('scheme_name') or doc.metadata.get('title') or "Unknown"
+            print(f"   -> Selected: {title} (Conf: {confidence:.2f})")
             
         return final_docs

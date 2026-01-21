@@ -1,0 +1,47 @@
+[
+  {
+    "query": "Show me schemes I am eligible for",
+    "type": "Discovery Mode (Eligible Only)",
+    "reply_snippet": "I couldn't find schemes purely matching your profile....",
+    "full_reply": "I couldn't find schemes purely matching your profile.",
+    "status": "FAIL",
+    "notes": "Expected 'Eligible \u2705' not found.",
+    "duration": "11.16s"
+  },
+  {
+    "query": "Tell me about schemes for farmers in general",
+    "type": "General Inquiry (No Strict Filter)",
+    "reply_snippet": "I couldn't find schemes purely matching your profile....",
+    "full_reply": "I couldn't find schemes purely matching your profile.",
+    "status": "FAIL",
+    "notes": "Expected 'PM Kisan' not found. Found forbidden 'I couldn't find schemes purely matching your profile'.",
+    "duration": "1.54s"
+  },
+  {
+    "query": "How to apply for PM Kisan?",
+    "type": "Specific Scheme application",
+    "reply_snippet": "**Pradhan Mantri Kisan Samman Nidhi**\n- **Status**: Info Only (Guest)\n- **Reason**: No automated eligibility checks performed.\n- **Application Process**:\n  1. The following are the prerequisites for t...",
+    "full_reply": "**Pradhan Mantri Kisan Samman Nidhi**\n- **Status**: Info Only (Guest)\n- **Reason**: No automated eligibility checks performed.\n- **Application Process**:\n  1. The following are the prerequisites for the enrollment process: Aadhaar Card, Landholding paper, Savings bank account.\n  2. The VLE will fill in the complete details of farmer registration including State, district, subdistrict block, and village, key in the Aadhaar number, Name of the beneficiary, category, Bank detail, Land Registration ID, and Date of birth as printed on Aadhaar card for authentication.\n  3. The VLE will fill in the Land details like Survey/ Kahta No., Khasra no., and area of land as mentioned in land holding papers.\n  4. Upload the supporting documents like Land, Aadhar, and Bank passbook.\n  5. Self-declaration accept and save the application form.\n  6. After saving the application form, make payment through CSC ID.\n  7. Check the Beneficiary status through the Aadhaar number.\n- **Links**: Not Provided.",
+    "status": "FAIL",
+    "notes": "Expected 'Visit official website' not found.",
+    "duration": "5.80s"
+  },
+  {
+    "query": "Tell me about Banglar Awaas Yojana",
+    "type": "State Mismatch Handling",
+    "reply_snippet": "I couldn't find schemes purely matching your profile....",
+    "full_reply": "I couldn't find schemes purely matching your profile.",
+    "status": "FAIL",
+    "notes": "Expected 'Note: Based on your profile' not found.",
+    "duration": "1.76s"
+  },
+  {
+    "query": "Am I eligible for Maternity Benefit?",
+    "type": "Profile Mismatch (Gender)",
+    "reply_snippet": "**Maternity Benefit**\n- **Status**: Not Eligible \u26d4\n- **Reason**: The scheme is specifically for registered female members or wives of male members under the Building and Other Construction Workers Wel...",
+    "full_reply": "**Maternity Benefit**\n- **Status**: Not Eligible \u26d4\n- **Reason**: The scheme is specifically for registered female members or wives of male members under the Building and Other Construction Workers Welfare Board of West Bengal, and you do not meet this criterion.\n- **Details**: \n  - Financial assistance during maternity.\n  - Support for medical expenses.\n  - Additional benefits may include nutrition support and childcare assistance.\n- **Links**: Not Provided.",
+    "status": "PASS",
+    "notes": "",
+    "duration": "8.68s"
+  }
+]

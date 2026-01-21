@@ -117,28 +117,61 @@ class SchemeMatcher:
         """
         matches = []
         mismatches = []
-        confidence = 0.5
+        confidence = 0.3  # Lower base confidence
         is_eligible = True 
         
         # Helper: Get Scheme Tags for Keyword Matching
+        scheme_name = str(scheme_metadata.get("scheme_name", "") or scheme_metadata.get("title", ""))
         scheme_tags = (str(scheme_metadata.get("tags", [])) + " " + 
-                       str(scheme_metadata.get("scheme_name", "")) + " " + 
+                       scheme_name + " " + 
                        str(scheme_metadata.get("beneficiary_type", ""))).lower()
 
         # ==========================================
         # 🔴 SECTION 1: HARD FILTERS
         # ==========================================
 
-        # 1. STATE CHECK (Critical)
+        # 1. STATE CHECK (Aggressive)
         user_state = (user_profile.get("state") or "").lower().replace("_", " ")
-        scheme_level = (scheme_metadata.get("level") or "Central").lower()
+        scheme_level = (scheme_metadata.get("level") or "").lower()
         scheme_gov = (scheme_metadata.get("government") or "").lower()
         
-        if scheme_level == "state":
-            if scheme_gov and user_state and user_state not in scheme_gov and scheme_gov not in user_state:
-                mismatches.append(f"⛔ State Mismatch: Scheme for {scheme_gov.title()}, you are in {user_state.title()}")
-                confidence = 0.0
-                is_eligible = False
+        indian_states = [
+            "andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh", "goa", "gujarat", "haryana", 
+            "himachal pradesh", "jharkhand", "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur", 
+            "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan", "sikkim", "tamil nadu", 
+            "telangana", "tripura", "uttar pradesh", "uttarakhand", "west bengal", "delhi", "chandigarh", "puducherry"
+        ]
+
+        if user_state:
+            # A. Explicit State Mismatch (Metadata based)
+            if scheme_level == "state" and scheme_gov:
+                if user_state not in scheme_gov and scheme_gov not in user_state:
+                    is_eligible = False
+                    reason = f"⛔ State Mismatch: Scheme for {scheme_gov.title()}, you are in {user_state.title()}"
+                    print(f"[MATCHER] REJECTED {scheme_name} ({reason})")
+                    return False, 0.0, [reason]
+
+            # B. Name-based State Exclusion (Aggressive)
+            # If name mentions another state (e.g. "Bihar", "Banglar"), reject it.
+            for state in indian_states:
+                if state != user_state and state in scheme_name.lower():
+                    # Handle "Banglar" as West Bengal
+                    if state == "west bengal" or "banglar" in scheme_name.lower():
+                        if user_state != "west bengal":
+                            is_eligible = False
+                            reason = f"⛔ State Conflict: Scheme mentions another state"
+                            print(f"[MATCHER] REJECTED {scheme_name} (Mentions other state: {state})")
+                            return False, 0.0, [reason]
+                    elif state in scheme_name.lower():
+                        is_eligible = False
+                        reason = f"⛔ State Conflict: Scheme mentions another state"
+                        print(f"[MATCHER] REJECTED {scheme_name} (Mentions other state: {state})")
+                        return False, 0.0, [reason]
+            
+            # C. Boost for Matching State
+            if user_state in scheme_name.lower() or (scheme_gov and user_state in scheme_gov):
+                matches.append(f"Eligibility: Matches your state ({user_state.title()})")
+                confidence += 0.4
 
         # 2A. DISABILITY CHECK (High Priority)
         user_disabled = user_profile.get("is_disabled", False)
@@ -150,7 +183,7 @@ class SchemeMatcher:
             is_eligible = False
         elif is_disability_scheme and user_disabled:
             matches.append("Eligibility: Matches Disability status")
-            confidence += 0.2
+            confidence += 0.3
 
         # 2B. MINORITY CHECK (High Priority)
         user_minority = user_profile.get("is_minority", False)
@@ -162,39 +195,30 @@ class SchemeMatcher:
             is_eligible = False
         elif is_minority_scheme and user_minority:
             matches.append("Eligibility: Matches Minority status")
-            confidence += 0.2
+            confidence += 0.3
 
-        # 3A. SOCIAL CATEGORY (CASTE) CHECK (Fixed Logic)
-        # We compare User Caste vs Scheme's Beneficiary Requirements (not Scheme Topic)
+        # 3A. SOCIAL CATEGORY (CASTE) CHECK
         user_caste = (user_profile.get("category") or "").lower()
-        # Look for beneficiary requirements in 'beneficiary_category' OR fallback to tags/name
         scheme_eligible_castes = (scheme_metadata.get("beneficiary_category") or "").lower()
         
-        # If metadata is missing, check tags for explicit caste mentions
         if not scheme_eligible_castes:
-            if "scheduled caste" in scheme_tags or " sc " in scheme_tags: scheme_eligible_castes += "sc"
-            if "scheduled tribe" in scheme_tags or " st " in scheme_tags: scheme_eligible_castes += "st"
+            if "sc" in scheme_tags or "scheduled caste" in scheme_tags: scheme_eligible_castes += "sc"
+            if "st" in scheme_tags or "scheduled tribe" in scheme_tags: scheme_eligible_castes += "st"
             if "obc" in scheme_tags: scheme_eligible_castes += "obc"
-            if not scheme_eligible_castes: scheme_eligible_castes = "all" # Default to all if no caste specified
+            if not scheme_eligible_castes: scheme_eligible_castes = "all"
 
         if scheme_eligible_castes not in ["all", "general", "any"] and user_caste:
-            # Check for mismatch (e.g., Scheme is for SC, User is General)
-            # Allow fuzzy matching (e.g., User "SC" matches Scheme "SC/ST")
             if user_caste not in scheme_eligible_castes:
                 mismatches.append(f"⛔ Category Mismatch: Scheme for {scheme_eligible_castes.upper()}, you are {user_caste.upper()}")
                 confidence = 0.0
                 is_eligible = False
+            else:
+                matches.append(f"Eligibility: Matches your category ({user_caste.upper()})")
+                confidence += 0.2
 
-        # 3B. AREA (Rural/Urban) CHECK (Hard Filter)
+        # 3B. AREA (Rural/Urban) CHECK
         user_area = (user_profile.get("area") or "").lower()
         scheme_residence = (scheme_metadata.get("residence_type") or "all").lower()
-        
-        # Fallback to tags if metadata missing
-        if scheme_residence == "all":
-            if "rural" in scheme_tags and "urban" not in scheme_tags:
-                scheme_residence = "rural"
-            elif "urban" in scheme_tags and "rural" not in scheme_tags:
-                scheme_residence = "urban"
         
         if scheme_residence not in ["all", "any", "both"] and user_area:
             if user_area != scheme_residence:
@@ -202,7 +226,7 @@ class SchemeMatcher:
                 confidence = 0.0
                 is_eligible = False
 
-        # 4. INCOME CHECK (Medium Priority)
+        # 4. INCOME CHECK
         user_income = user_profile.get("annual_income") or user_profile.get("family_income")
         scheme_income_max = scheme_metadata.get("income_max")
         
@@ -212,10 +236,10 @@ class SchemeMatcher:
                 confidence = 0.0
                 is_eligible = False
             else:
-                matches.append(f"Income: Rs.{user_income:,} is within limit")
+                matches.append(f"Income: Matches limit constraints")
                 confidence += 0.1
 
-        # 5. AGE CHECK (Medium Priority)
+        # 5. AGE CHECK
         user_age = user_profile.get("age")
         if user_age:
             age_min = scheme_metadata.get("age_min")
@@ -230,7 +254,7 @@ class SchemeMatcher:
                     confidence = 0.0
                     is_eligible = False
                 else:
-                    matches.append(f"Age: {user_age} is within range")
+                    matches.append(f"Age: {user_age} matches scheme range")
                     confidence += 0.1
 
         # 6. STUDENT CHECK (Hard Filter)

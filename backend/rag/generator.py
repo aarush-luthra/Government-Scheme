@@ -158,17 +158,20 @@ def generate_answer(user_question: str, context_documents: List[Document], histo
     - Review the [ELIGIBILITY CHECKS] for each scheme.
     - If a scheme has "⛔", DO NOT recommend it as a valid option.
     - If a scheme has "✅", prioritize it.
-    - Use the provided official/apply links if available in the text.
+    - If a scheme has "✅", prioritize it.
+    - **LINKS STRATEGY:** ONLY output official URLs (starting with http/https) that are EXPLICITLY provided in the Scheme Content.
+    - DO NOT HALLUCINATE LINKS. Do not invent "Apply Here", "User Manual", or "Login" links if the URL is not in the text.
+    - If no HTTP link is found, write "Official links not provided in database."
     
     IMPORTANT USER CONTEXT:
-    { "User is a GUEST (No Profile). DEFAULT Status is 'Info Only'. HOWEVER, if the user provides specific details (Age, State, Qualification, Category) in the chat, YOU MUST ESTIMATE ELIGIBILITY. Mark as 'Likely Eligible ✅' or 'Likely Not Eligible ⛔' based on the provided details." if not user_profile else "User is LOGGED IN. You MUST determine eligibility status (✅/⛔) based on the [ELIGIBILITY CHECKS]." }
+    { "User is a GUEST (No Profile). DEFAULT Status is 'Info Only'. HOWEVER, if the user provides specific details (Age, State, Qualification, Category) in the chat, YOU MUST ESTIMATE ELIGIBILITY. Mark as 'Likely Eligible ✅' or 'Likely Not Eligible ⛔' based on the provided details." if not user_profile else "User is LOGGED IN. You MUST determine eligibility status (✅/⛔) based on the [ELIGIBILITY CHECKS]. \n    CONVERSATIONAL OVERRIDE: If the user provides NEW profile details (e.g. 'I have 2 hectares land') in the chat history that fixes a previous rejection reason, YOU MUST RE-EVALUATE eligibility using the new info. OVERRIDE the system's '⛔' status to 'Verified Eligible ✅' if the new info satisfies the criteria found in the Scheme Content or previous messages." }
     
     FOCUS INSTRUCTIONS:
     {
-    "User asked for ELIGIBILITY. Output ONLY the Eligibility Criteria and Status. Do NOT show Application Process or Benefits. IGNORE schemes that are not an exact match to the requested name." if any(k in user_question.lower() for k in ["eligibility", "eligible", "who can apply", "criteria"]) else
+    "User asked for ELIGIBILITY CRITERIA specifically. Output ONLY the Eligibility Criteria and Status. Do NOT show Application Process or Benefits. IGNORE schemes that are not an exact match to the requested name." if any(k in user_question.lower() for k in ["eligibility criteria", "who can apply", "criteria for", "check eligibility"]) else
     "User asked for APPLICATION PROCESS. Output ONLY the Application Steps and Links. Do NOT show Eligibility or Benefits. IGNORE schemes that are not an exact match." if any(k in user_question.lower() for k in ["how to apply", "application", "procedure", "apply"]) else
     "User asked for BENEFITS. Output ONLY the Benefits/Details. IGNORE schemes that are not an exact match." if any(k in user_question.lower() for k in ["benefit", "what do i get", "amount", "incentive"]) else
-    "Standard Summary Mode."
+    "COMPREHENSIVE MODE (Default): The user wants to know about schemes. Filter strictly: ONLY show schemes where Status is 'Eligible ✅'. DO NOT show 'Not Eligible ⛔' schemes. Limit to the TOP 3 most relevant schemes. For each, provide: 1. Status 2. Description/Benefits 3. Criteria 4. Application 5. Links."
     }
     """
     

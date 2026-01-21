@@ -613,8 +613,11 @@ async def chat(req: ChatRequest):
             # Check if this is an explicit eligibility query/recommendation request
             # Refined Logic: Distinguish between "Am I eligible?" (Strict) vs "How to be eligible?" (Info)
             
+            print(f"[DEBUG] Processing Query: '{english_message}'")
+            print(f"[DEBUG] User Profile: {user_profile}")
+
             # 1. Personal Eligibility ("For me", "Am I") -> Strict Profile Search
-            personal_keywords = ["for me", "am i", "my profile", "recommend me", "suggest for me", "i qualify"]
+            personal_keywords = ["for me", "am i", "my profile", "recommend me", "suggest for me", "i qualify", "i am eligible", "eligible for me"]
             is_personal_query = any(k in english_message.lower() for k in personal_keywords)
             
             # 2. General Eligibility Info ("How to be eligible", "Criteria for scheme") -> Standard Search
