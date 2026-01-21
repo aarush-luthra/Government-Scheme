@@ -9,7 +9,8 @@ from datetime import datetime
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
-from backend.rag.generator import generate_answer
+from backend.rag.generator import generate_answer, generate_general_reply
+from backend.rag.scheme_matcher import SchemeMatcher
 from backend import database as db  # Import database module
 from backend.routes.ocr_routes import router as ocr_router  # Import OCR routes
 from dotenv import load_dotenv
@@ -507,6 +508,17 @@ def detect_intent(message: str) -> str:
     """
     msg_lower = message.strip().lower()
     
+    # General conversation patterns (about the bot, pleasantries, general questions)
+    general_patterns = [
+        "who are you", "what is your name", "what do you do", "who made you",
+        "how are you", "what's up", "good morning", "good night",
+        "tell me a joke", "say something", "talk to me", "are you real",
+        "human", "robot", "bot", "ai", "intelligence", "smart",
+        "help", "what is this", "how does this work", "support"
+    ]
+    if any(p in msg_lower for p in general_patterns):
+        return "general_chat"
+    
     # Short greetings (under 15 chars, no question words)
     if len(msg_lower) < 15 and any(g in msg_lower for g in GREETING_PATTERNS[:14]):
         return "greeting"
@@ -515,9 +527,6 @@ def detect_intent(message: str) -> str:
     if any(t in msg_lower for t in ["thank", "thanks", "धन्यवाद", "शुक्रिया"]):
         return "thanks"
     
-    # Help requests
-    if msg_lower in ["help", "?", "what can you do", "how to use"]:
-        return "help"
     
     # Scheme detail requests - "tell me more about X", "details about X", "what is X scheme"
     # Scheme detail requests
@@ -527,6 +536,11 @@ def detect_intent(message: str) -> str:
         "describe", "elaborate on", "info about", "information on",
         "details of", "scheme for", "yojana"
     ]
+    # First, check if this is an eligibility query - if so, prioritize that over scheme detail
+    eligibility_keywords = ["eligible", "eligibility", "qualify", "recommend", "suggest", "for me", "my profile", "am i", "can i apply"]
+    if any(k in msg_lower for k in eligibility_keywords):
+        return "scheme_query"
+
     if any(pattern in msg_lower for pattern in detail_patterns):
         return "scheme_detail"
     
@@ -538,6 +552,7 @@ def detect_intent(message: str) -> str:
         if any(w in msg_lower for w in ["scheme", "yojana", "mission", "program", "fund", "allowance", "subsidy"]):
             return "scheme_detail"
             
+
     # Default: scheme query
     return "scheme_query"
 
@@ -617,6 +632,14 @@ async def chat(req: ChatRequest):
             if db_chat_history:
                 logger.info(f"Loaded {len(db_chat_history)} chat entries from database")
         
+        # Merge database chat history with request history
+        merged_history = req.history or []
+        if db_chat_history:
+            # Convert database format to chat format (last 10 entries)
+            for entry in db_chat_history[-10:]:
+                merged_history.append({"role": "user", "content": entry["question"]})
+                merged_history.append({"role": "assistant", "content": entry["answer"]})
+        
         # Step 1: Detect or validate source language
         if req.source_lang is None or req.source_lang == "auto":
             detected_lang = translator.detect_language_code(req.message)
@@ -680,6 +703,27 @@ async def chat(req: ChatRequest):
                 translated_message=None
             )
         
+        if intent == "general_chat":
+            logger.info("Detected general chat intent - responding without RAG")
+            reply = generate_general_reply(
+                user_question=english_message,
+                history=merged_history,
+                user_profile=user_profile
+            )
+            
+            # Translate response if needed
+            if target_lang != "en_XX":
+                reply = translator.from_english(reply, target_lang)
+                logger.info(f"Translated response to {target_lang}")
+                
+            return ChatResponse(
+                reply=reply,
+                detected_language=detected_lang,
+                language_name=language_name,
+                original_message=original_message,
+                translated_message=english_message if source_lang != "en_XX" else None
+            )
+        
         # Step 2.6: Handle scheme detail requests - retrieve all info about a specific scheme
         if intent == "scheme_detail":
             scheme_name = extract_scheme_name(english_message)
@@ -702,22 +746,39 @@ async def chat(req: ChatRequest):
             else:
                 logger.info(f"No exact match, using top {len(docs)} relevant docs")
         
-        # Step 3: Retrieve relevant documents using profile-aware search
+        # Step 3: Retrieve relevant documents
         elif user_profile:
-            # Use profile-based multi-query search for better eligibility matching
-            docs = retriever.search_by_profile(user_profile, k=8)
-            logger.info(f"Profile-based search returned {len(docs)} documents")
+            # Check if this is an explicit eligibility query/recommendation request
+            eligibility_keywords = ["eligible", "qualify", "recommend", "suggest", "for me", "my profile", "am i", "can i apply"]
+            is_eligibility_query = any(k in english_message.lower() for k in eligibility_keywords)
+            
+            if is_eligibility_query:
+                # Use profile-based multi-query search for better eligibility matching
+                raw_docs = retriever.search_by_profile(user_profile, k=12) # Fetch more for filtering
+                logger.info(f"Profile-based search returned {len(raw_docs)} documents")
+                
+                # Strict Filtering: Rank by eligibility
+                ranked_results = SchemeMatcher.rank_schemes(user_profile, raw_docs)
+                
+                # Take top eligible schemes (confidence > 0.5 or strictly eligible)
+                docs = []
+                for doc, confidence, reasons in ranked_results:
+                    # Provide reasons to prompt/context
+                    doc.metadata["match_reasons"] = reasons
+                    doc.metadata["match_confidence"] = confidence
+                    docs.append(doc)
+                
+                # Keep top 5 best matches
+                docs = docs[:5]
+                logger.info(f"After filtering, kept {len(docs)} high-confidence schemes")
+            else:
+                # Standard query search using the actual message
+                docs = retriever.search(english_message, k=6)
+                logger.info(f"Standard search returned {len(docs)} documents")
         else:
             # Standard query search
             docs = retriever.search(english_message, k=6)
         
-        # Merge database chat history with request history
-        merged_history = req.history or []
-        if db_chat_history:
-            # Convert database format to chat format (last 10 entries)
-            for entry in db_chat_history[-10:]:
-                merged_history.append({"role": "user", "content": entry["question"]})
-                merged_history.append({"role": "assistant", "content": entry["answer"]})
         
         # Step 4: Generate answer with strict eligibility checking
         # Build context with scheme links from metadata

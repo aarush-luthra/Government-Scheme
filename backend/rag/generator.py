@@ -192,3 +192,44 @@ def generate_eligibility_query(user_profile: Dict) -> str:
         query_parts.append("government scheme eligibility")
     
     return " ".join(query_parts)
+
+
+GENERAL_SYSTEM_PROMPT = """You are a helpful Government Scheme Assistant for India.
+Your primary purpose is to help people find and understand government schemes.
+
+However, the user has asked a general question that doesn't seem to be about looking up specific schemes.
+1. Answer their question specifically and helpfully.
+2. If appropriate, gently guide them back to your main purpose (finding government schemes).
+3. Do NOT invent government schemes or try to force a scheme recommendation if it doesn't make sense.
+4. Keep the tone professional, kind, and helpful.
+"""
+
+def generate_general_reply(user_question: str, history: Optional[List[Dict[str, str]]] = None, user_profile: Optional[Dict] = None) -> str:
+    """
+    Generate a reply for general conversation without scheme context.
+    """
+    messages = [{"role": "system", "content": GENERAL_SYSTEM_PROMPT}]
+    
+    # Add profile context if available (just for personalization)
+    if user_profile:
+        name = user_profile.get("fullName") or user_profile.get("name")
+        if name:
+            messages.append({"role": "system", "content": f"The user's name is {name}."})
+    
+    # Add history
+    if history:
+        for msg in history[-3:]: # Keep history short for general chat
+            role = msg.get("role")
+            content = msg.get("content")
+            if role in ["user", "assistant"] and content:
+                messages.append({"role": role, "content": content})
+                
+    messages.append({"role": "user", "content": user_question})
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.7, # Slightly higher temperature for more natural conversation
+    )
+
+    return response.choices[0].message.content.strip()

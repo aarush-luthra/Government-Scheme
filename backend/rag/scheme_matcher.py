@@ -40,9 +40,9 @@ class SchemeMatcher:
         age = user_profile.get("age")
         if age:
             if age < 18:
-                queries.append("child minor student youth schemes")
+                queries.append("child minor youth schemes")
             elif age < 30:
-                queries.append("youth young adult student schemes")
+                queries.append("youth young adult schemes")
             elif age < 60:
                 queries.append("adult working age schemes")
             else:
@@ -161,6 +161,13 @@ class SchemeMatcher:
         elif scheme_student and user_student:
             matches.append("Student requirement matches")
             confidence += 0.1
+        
+        # Heuristic: Check title for student keywords if metadata is missing
+        title = scheme_metadata.get("title", "").lower()
+        student_keywords = ["student", "scholarship", "college", "university", "matric", "school"]
+        if not user_student and any(k in title for k in student_keywords):
+            mismatches.append("Scheme appears to be for students/education")
+            confidence -= 0.4
         
         # Clamp confidence
         confidence = max(0.0, min(1.0, confidence))
