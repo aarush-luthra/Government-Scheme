@@ -1,6 +1,6 @@
 """
 Scheme Matcher Agent - Profile-based scheme eligibility matching.
-Prioritized Hard Filters: State > Dis/Min > Cat/Area > Income > Age > Student
+Prioritized Hard Filters: State > Dis/Min > Caste (Social Cat) > Income > Age > Student
 """
 from typing import Dict, List, Optional, Tuple
 
@@ -18,7 +18,7 @@ class SchemeMatcher:
         queries = []
         queries.append("eligibility criteria benefits")
         
-        # 1. CATEGORY
+        # 1. SOCIAL CATEGORY (Caste)
         category = (user_profile.get("category") or "").lower()
         if category in ["sc", "scheduled caste"]:
             queries.append("scheduled caste SC schemes")
@@ -104,7 +104,7 @@ class SchemeMatcher:
         HARD FILTERS (Strict - sets is_eligible=False):
         1. State
         2. Disability OR Minority
-        3. Category OR Area
+        3. Social Category (Caste) OR Area
         4. Income
         5. Age
         6. Student Status
@@ -112,14 +112,15 @@ class SchemeMatcher:
         SOFT FILTERS (Lenient - reduces confidence):
         1. Gender
         2. Employment Status
-        3. Govt Employee Exclusion
+        3. Scheme Topic Relevance (New)
+        4. Govt Employee Exclusion
         """
         matches = []
         mismatches = []
         confidence = 0.5
         is_eligible = True 
         
-        # Helper: Get Scheme Tags
+        # Helper: Get Scheme Tags for Keyword Matching
         scheme_tags = (str(scheme_metadata.get("tags", [])) + " " + 
                        str(scheme_metadata.get("scheme_name", "")) + " " + 
                        str(scheme_metadata.get("beneficiary_type", ""))).lower()
@@ -163,19 +164,28 @@ class SchemeMatcher:
             matches.append("Eligibility: Matches Minority status")
             confidence += 0.2
 
-        # 3A. CATEGORY CHECK (New Hard Filter)
-        user_cat = (user_profile.get("category") or "").lower()
-        scheme_cat = (scheme_metadata.get("category") or "all").lower()
+        # 3A. SOCIAL CATEGORY (CASTE) CHECK (Fixed Logic)
+        # We compare User Caste vs Scheme's Beneficiary Requirements (not Scheme Topic)
+        user_caste = (user_profile.get("category") or "").lower()
+        # Look for beneficiary requirements in 'beneficiary_category' OR fallback to tags/name
+        scheme_eligible_castes = (scheme_metadata.get("beneficiary_category") or "").lower()
         
-        if scheme_cat not in ["all", "general", "any"] and user_cat:
-            # e.g., Scheme is for "SC", User is "General" -> Block
-            # But if Scheme is "SC", User is "SC" -> Pass
-            if user_cat not in scheme_cat:
-                mismatches.append(f"⛔ Category Mismatch: Scheme for {scheme_cat.upper()}, you are {user_cat.upper()}")
+        # If metadata is missing, check tags for explicit caste mentions
+        if not scheme_eligible_castes:
+            if "scheduled caste" in scheme_tags or " sc " in scheme_tags: scheme_eligible_castes += "sc"
+            if "scheduled tribe" in scheme_tags or " st " in scheme_tags: scheme_eligible_castes += "st"
+            if "obc" in scheme_tags: scheme_eligible_castes += "obc"
+            if not scheme_eligible_castes: scheme_eligible_castes = "all" # Default to all if no caste specified
+
+        if scheme_eligible_castes not in ["all", "general", "any"] and user_caste:
+            # Check for mismatch (e.g., Scheme is for SC, User is General)
+            # Allow fuzzy matching (e.g., User "SC" matches Scheme "SC/ST")
+            if user_caste not in scheme_eligible_castes:
+                mismatches.append(f"⛔ Category Mismatch: Scheme for {scheme_eligible_castes.upper()}, you are {user_caste.upper()}")
                 confidence = 0.0
                 is_eligible = False
 
-        # 3B. AREA (Rural/Urban) CHECK (New Hard Filter)
+        # 3B. AREA (Rural/Urban) CHECK (Hard Filter)
         user_area = (user_profile.get("area") or "").lower()
         scheme_residence = (scheme_metadata.get("residence_type") or "all").lower()
         
@@ -223,7 +233,7 @@ class SchemeMatcher:
                     matches.append(f"Age: {user_age} is within range")
                     confidence += 0.1
 
-        # 6. STUDENT CHECK (Lower Priority Hard Filter)
+        # 6. STUDENT CHECK (Hard Filter)
         user_student = user_profile.get("is_student", False)
         is_student_scheme = any(x in scheme_tags for x in ["scholarship", "student", "tuition", "fellowship"])
         
@@ -243,7 +253,24 @@ class SchemeMatcher:
         # 🟡 SECTION 2: SOFT FILTERS (Penalties)
         # ==========================================
 
-        # 7. GENDER CHECK (Soft)
+        # 7. SCHEME TOPIC RELEVANCE (Fixed Logic)
+        # Check if Scheme Topic (Agriculture, Edu) matches User Profile
+        scheme_topic = (scheme_metadata.get("category") or "").lower() # This is the Domain (e.g. Agriculture)
+        user_emp = (user_profile.get("employment_status") or "").lower()
+        
+        # Example 1: Farmer -> Agriculture
+        if "agriculture" in scheme_topic and "farmer" in user_emp:
+            matches.append(f"Relevance: Scheme Topic '{scheme_topic.title()}' matches your Occupation")
+            confidence += 0.15
+        
+        # Example 2: Student -> Education
+        elif "education" in scheme_topic and user_profile.get("is_student"):
+            matches.append(f"Relevance: Scheme Topic '{scheme_topic.title()}' matches Student status")
+            confidence += 0.15
+            
+        # Example 3: Health -> Everyone (No Boost, but no penalty)
+
+        # 8. GENDER CHECK (Soft)
         user_gender = (user_profile.get("gender") or "").lower()
         scheme_gender = (scheme_metadata.get("gender") or "all").lower()
         
@@ -252,13 +279,12 @@ class SchemeMatcher:
                 mismatches.append(f"⚠️ Gender Warning: Scheme prefers {scheme_gender.title()}")
                 confidence -= 0.3
 
-        # 8. EMPLOYMENT STATUS CHECK (Soft)
-        user_emp = (user_profile.get("employment_status") or "").lower()
+        # 9. EMPLOYMENT STATUS CHECK (Soft)
         if "farmer" in scheme_tags and "farmer" not in user_emp and "agriculture" not in user_emp:
              mismatches.append("⚠️ Employment Warning: Scheme appears to be for Farmers")
              confidence -= 0.2
 
-        # 9. GOVT EMPLOYEE EXCLUSION (Soft)
+        # 10. GOVT EMPLOYEE EXCLUSION (Soft)
         user_govt = user_profile.get("is_govt_employee", False)
         exclusions = (scheme_metadata.get("exclusions") or "").lower()
         
@@ -294,9 +320,9 @@ class SchemeMatcher:
                 user_profile, doc.metadata
             )
             
-            # Default behavior: Keep everything, just rank lower if ineligible
-            # This allows the LLM to see "Why it wasn't valid" and explain it
-            ranked.append((doc, confidence, reasons))
+            # Keep if eligible (Hard Filters passed)
+            if is_eligible and confidence > 0.0:
+                ranked.append((doc, confidence, reasons))
         
         # Sort by confidence descending
         ranked.sort(key=lambda x: x[1], reverse=True)
