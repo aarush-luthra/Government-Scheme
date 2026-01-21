@@ -25,21 +25,62 @@ INTENT VS ELIGIBILITY PROTOCOL:
    - **RULE:** HIDE schemes with `⛔` (Hard Filter Fail).
    - **OUTPUT:** If nothing matches, say "I couldn't find schemes purely matching your profile."
 
+3. **CASE C: Specific Scheme Lookup**
+   - **Examples:** "Tell me about [Scheme Name]", "How to apply for [Scheme Name]", "[Scheme Name]".
+   - **ACTION:** Prioritize the EXACT match.
+   - **RULE:** If the context contains the specific scheme requested, show THAT ONE first and predominantly.
+   - **RULE:** Only list other retrieved schemes if they are highly relevant alternatives. If they are just vector search noise, ignore them.
+
 ELIGIBILITY LOGIC (Review [ELIGIBILITY CHECKS] in scheme context):
 - **⛔ HARD FILTERS:** User is technically ineligible.
 - **✅ MATCHES:** Perfect match.
 
 RESPONSE FORMAT:
 **[Scheme Name]**
-- **Status**: [Eligible ✅ / Not Eligible ⛔]
+- **Status**: [Eligible ✅ / Not Eligible ⛔ / Info Only (Guest)]
 - **Reason**: [Explain match/mismatch from [ELIGIBILITY CHECKS]]
 - **Details**: [Benefits]
-- **Links**: [Official/Apply]
+- **Links**: [Official/Apply] (If 'Links Not Provided', write 'Not Provided'. DO NOT use '#')
+
+DYNAMIC ADAPTATION (Override above format if user asks for specific aspects):
+- **If user asks "How to apply for X"**: Show ONLY the **Application Process** and **Links**. Omit eligibility/benefits unless critical.
+- **If user asks "Eligibility for X"**: Show ONLY the **Eligibility Criteria** and **Status (✅/⛔)**. Omit application process.
+- **If user asks "Benefits of X"**: Show ONLY the **Benefits/Details**.
 
 CONVERSATIONAL GUIDELINES:
 - **Default to Helpful:** If unsure of intent, show the information with a warning.
-- **Single Source of Truth:** Only use provided schemes.
+- **Single Source of Truth:** Only use provided schemes. Do NOT invent links.
 """
+
+
+GENERAL_SYSTEM_PROMPT = """You are a helpful and friendly Government Scheme Assistant for India.
+- Your goal is to help users find government schemes they are eligible for.
+- If the user asks general questions ("How are you?", "Who are you?"), allow casual conversation but gently steer them back to finding schemes.
+- Do NOT halluncinate specific scheme details. If asked about a scheme, say you need to look it up (which will happen in the next turn if they ask correctly).
+- Keep responses concise and encouraging.
+"""
+
+
+def generate_general_reply(user_question: str, history: Optional[List[Dict[str, str]]] = None) -> str:
+    """
+    Generate a reply for general conversation (greeting, help, small talk) without RAG context.
+    Disables strict filtering mode for a more natural conversation.
+    """
+    messages = [{"role": "system", "content": GENERAL_SYSTEM_PROMPT}]
+    
+    if history:
+        for msg in history[-3:]:
+             if msg.get("content"):
+                messages.append({"role": msg.get("role"), "content": msg.get("content")})
+    
+    messages.append({"role": "user", "content": user_question})
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.7, 
+    )
+    return response.choices[0].message.content.strip()
 
 
 def format_docs_for_context(documents: List[Document]) -> str:
@@ -118,6 +159,17 @@ def generate_answer(user_question: str, context_documents: List[Document], histo
     - If a scheme has "⛔", DO NOT recommend it as a valid option.
     - If a scheme has "✅", prioritize it.
     - Use the provided official/apply links if available in the text.
+    
+    IMPORTANT USER CONTEXT:
+    { "User is a GUEST (No Profile). DEFAULT Status is 'Info Only'. HOWEVER, if the user provides specific details (Age, State, Qualification, Category) in the chat, YOU MUST ESTIMATE ELIGIBILITY. Mark as 'Likely Eligible ✅' or 'Likely Not Eligible ⛔' based on the provided details." if not user_profile else "User is LOGGED IN. You MUST determine eligibility status (✅/⛔) based on the [ELIGIBILITY CHECKS]." }
+    
+    FOCUS INSTRUCTIONS:
+    {
+    "User asked for ELIGIBILITY. Output ONLY the Eligibility Criteria and Status. Do NOT show Application Process or Benefits. IGNORE schemes that are not an exact match to the requested name." if any(k in user_question.lower() for k in ["eligibility", "eligible", "who can apply", "criteria"]) else
+    "User asked for APPLICATION PROCESS. Output ONLY the Application Steps and Links. Do NOT show Eligibility or Benefits. IGNORE schemes that are not an exact match." if any(k in user_question.lower() for k in ["how to apply", "application", "procedure", "apply"]) else
+    "User asked for BENEFITS. Output ONLY the Benefits/Details. IGNORE schemes that are not an exact match." if any(k in user_question.lower() for k in ["benefit", "what do i get", "amount", "incentive"]) else
+    "Standard Summary Mode."
+    }
     """
     
     messages.append({"role": "user", "content": user_message})

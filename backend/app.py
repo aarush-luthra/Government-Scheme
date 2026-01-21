@@ -9,7 +9,8 @@ from datetime import datetime
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from backend.nlp.indicbart import IndicBartTranslator
 from backend.rag.retriever import VectorStoreRetriever
-from backend.rag.generator import generate_answer
+from backend.rag.generator import generate_answer, generate_general_reply
+from backend.rag.scheme_matcher import SchemeMatcher
 from backend import database as db  # Import database module
 from backend.routes.ocr_routes import router as ocr_router  # Import OCR routes
 from dotenv import load_dotenv
@@ -445,12 +446,26 @@ def detect_intent(message: str) -> str:
     """Detect the intent of the user message."""
     msg_lower = message.strip().lower()
     
+    # General conversation patterns (Prioritize over greetings)
+    general_patterns = [
+        "who are you", "what is your name", "what do you do", "who made you",
+        "how are you", "what's up", "good morning", "good night",
+        "tell me a joke", "say something", "talk to me", "are you real",
+        "human", "robot", "bot", "ai", "intelligence", "smart",
+        "help", "what is this", "how does this work", "support",
+        "what time", "what date", "current time", "today", "weather",
+        "where are you", "location", "cool", "nice", "ok", "okay",
+        "meaning of life", "love", "hate", "food", "eat", "drink"
+    ]
+    if any(p in msg_lower for p in general_patterns):
+        return "general_chat"
+
     if len(msg_lower) < 15 and any(g in msg_lower for g in GREETING_PATTERNS[:14]):
         return "greeting"
     
     if any(t in msg_lower for t in ["thank", "thanks", "धन्यवाद", "शुक्रिया"]):
         return "thanks"
-    
+
     if msg_lower in ["help", "?", "what can you do", "how to use"]:
         return "help"
     
@@ -528,6 +543,13 @@ async def chat(req: ChatRequest):
         if req.user_id:
             db_chat_history = db.get_chat_history(req.user_id)
         
+        # Merge chat history
+        merged_history = req.history or []
+        if db_chat_history:
+            for entry in db_chat_history[-10:]:
+                merged_history.append({"role": "user", "content": entry["question"]})
+                merged_history.append({"role": "assistant", "content": entry["answer"]})
+        
         # Step 1: Detect or validate source language
         if req.source_lang is None or req.source_lang == "auto":
             detected_lang = translator.detect_language_code(req.message)
@@ -576,12 +598,58 @@ async def chat(req: ChatRequest):
                 original_message=original_message, translated_message=None
             )
         
-        # Step 3: Retrieve relevant documents (Filtered by Profile)
+        if intent == "general_chat":
+            reply = generate_general_reply(english_message, merged_history)
+            if target_lang != "en_XX":
+                reply = translator.from_english(reply, target_lang)
+            return ChatResponse(
+                reply=reply, detected_language=detected_lang, language_name=language_name,
+                original_message=original_message, translated_message=None
+            )
+        
+        # Step 3: Retrieve relevant documents (Smart Switching)
         # Note: The retriever now handles SchemeMatcher ranking internally
         if user_profile:
-            logger.info(f"Searching with profile constraints for user: {req.user_id or 'Guest'}")
-            # Pass the user's ACTUAL query (english_message) so the retriever can find what they asked for!
-            docs = retriever.search_by_profile(user_profile, query=english_message, k=20)
+            # Check if this is an explicit eligibility query/recommendation request
+            # Refined Logic: Distinguish between "Am I eligible?" (Strict) vs "How to be eligible?" (Info)
+            
+            # 1. Personal Eligibility ("For me", "Am I") -> Strict Profile Search
+            personal_keywords = ["for me", "am i", "my profile", "recommend me", "suggest for me", "i qualify"]
+            is_personal_query = any(k in english_message.lower() for k in personal_keywords)
+            
+            # 2. General Eligibility Info ("How to be eligible", "Criteria for scheme") -> Standard Search
+            # If the user asks "How can I be eligible for it?", they want INFO, not a profile check that returns nothing.
+            is_informational = any(k in english_message.lower() for k in ["how", "what", "criteria", "requirements"])
+            
+            # TRIGGER STRICT MODE ONLY IF: (It's personal) OR (It's an eligibility keyword BUT NOT informational)
+            eligibility_keywords = ["eligible", "qualify", "eligibility"]
+            has_eligibility_word = any(k in english_message.lower() for k in eligibility_keywords)
+            
+            should_use_strict_search = is_personal_query or (has_eligibility_word and not is_informational)
+            
+            if should_use_strict_search:
+                logger.info(f"Searching with strict profile constraints for user: {req.user_id}")
+                # Use profile-based multi-query search, BUT include the message query to catch scheme names
+                raw_docs = retriever.search_by_profile(user_profile, query=english_message, k=15)
+                
+                # Strict Filtering: Rank by eligibility
+                ranked_results = SchemeMatcher.rank_schemes(user_profile, raw_docs)
+                
+                # Take top eligible schemes (confidence > 0.0 or explicitly eligible)
+                docs = []
+                for doc, confidence, reasons in ranked_results:
+                    # Enrich metadata for prompt
+                    doc.metadata["eligibility_reasons"] = "\n".join(reasons)
+                    docs.append(doc)
+                
+                # Keep top 5 best matches
+                docs = docs[:5]
+                logger.info(f"After filtering, kept {len(docs)} high-confidence schemes")
+                
+            else:
+                 # Standard query search (Topic-based) - user wants info, not necessarily "for them"
+                 logger.info(f"Standard topic search (ignoring strict profile) for user: {req.user_id}")
+                 docs = retriever.search(english_message, k=6)
         else:
             # Standard search if no profile available
             docs = retriever.search(english_message, k=6)
@@ -593,20 +661,19 @@ async def chat(req: ChatRequest):
             apply_link = doc.metadata.get("apply_link")
             
             links_block = []
-            if official_site and "official website" not in doc.page_content.lower():
-                links_block.append(f"Official Website: {official_site}")
-            if apply_link and "apply online" not in doc.page_content.lower():
-                links_block.append(f"Apply Online: {apply_link}")
+            if official_site and str(official_site).lower() not in ["none", "nan", "ma", "not available", ""]:
+                if "official website" not in doc.page_content.lower():
+                    links_block.append(f"Official Website: {official_site}")
+            
+            if apply_link and str(apply_link).lower() not in ["none", "nan", "ma", "not available", ""]:
+                if "apply online" not in doc.page_content.lower():
+                    links_block.append(f"Apply Online: {apply_link}")
                 
             if links_block:
                 doc.page_content += "\n\n[SCHEME LINKS]:\n" + "\n".join(links_block)
+            else:
+                doc.page_content += "\n\n[SCHEME LINKS]:\nLinks Not Provided In Database"
 
-        # Merge chat history
-        merged_history = req.history or []
-        if db_chat_history:
-            for entry in db_chat_history[-10:]:
-                merged_history.append({"role": "user", "content": entry["question"]})
-                merged_history.append({"role": "assistant", "content": entry["answer"]})
         
         # Step 4: Generate answer
         # Changed: We now pass the List[Document] directly to the generator
