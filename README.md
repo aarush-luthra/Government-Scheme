@@ -12,6 +12,11 @@ A modern, AI-powered assistant designed to help Indian citizens discover and und
 - **📚 RAG-Powered Accuracy** - Retrieves information from curated government scheme documents
 - **⚡ Real-time Translation** - Powered by Facebook's NLLB-200 model
 
+### Advanced Features
+- **📄 OCR Document Scanning** - Upload Aadhaar/PAN cards to auto-fill your profile details (Powered by EasyOCR/Tesseract)
+- **✏️ Smart Profile Management** - Standardized flow to create and edit your profile with auto-population
+- **🗣️ Voice-Ready Architecture** - (Upcoming) Built with support for future voice integration
+
 ### User Experience
 - **🎨 Modern UI** - Clean, professional interface with dark/light mode support
 - **📱 Responsive Design** - Works seamlessly on desktop and mobile devices
@@ -27,32 +32,46 @@ A modern, AI-powered assistant designed to help Indian citizens discover and und
 | **Frontend** | HTML5, Vanilla JS, CSS3 |
 | **LLM** | OpenAI GPT-4o-mini |
 | **Vector Database** | FAISS |
+| **Database** | SQLite (User Profiles & Chat History) |
 | **Translation** | Facebook NLLB-200-distilled-600M |
 | **Embeddings** | OpenAI text-embedding-3-small |
+| **OCR** | EasyOCR / Tesseract / PDF2Image |
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.10+ (Recommended: 3.12)
 - OpenAI API Key
+- **Tesseract OCR Engine** (Required for document scanning)
 
 ### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/aarush-luthra/Government-Scheme.git
-cd Government-Scheme
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/aarush-luthra/Government-Scheme.git
+   cd Government-Scheme
+   ```
 
-# Create and activate virtual environment
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On Mac/Linux:
-# source venv/bin/activate
+2. **Create and activate virtual environment**
+   ```bash
+   python -m venv venv
+   
+   # On Windows:
+   venv\Scripts\activate
+   
+   # On Mac/Linux:
+   source venv/bin/activate
+   ```
 
-# Install dependencies
-pip install -r requirements.txt
-```
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Install Tesseract OCR**
+   - **macOS:** `brew install tesseract`
+   - **Windows:** Download installer from [UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki) and add to PATH.
+   - **Linux:** `sudo apt-get install tesseract-ocr`
 
 ### Configuration
 
@@ -105,6 +124,7 @@ Open your browser to: **[http://localhost:8000](http://localhost:8000)**
 │  │   Static    │  │    Auth     │  │    Chat     │     │
 │  │   Files     │  │  Endpoints  │  │     API     │     │
 │  └─────────────┘  └─────────────┘  └──────┬──────┘     │
+│                                           │             │
 └───────────────────────────────────────────┼─────────────┘
                                             │
             ┌───────────────────────────────┼───────────────────────┐
@@ -123,6 +143,9 @@ Open your browser to: **[http://localhost:8000](http://localhost:8000)**
 Government-Scheme/
 ├── backend/
 │   ├── app.py                 # Main FastAPI application
+│   ├── database.py            # SQLite User & Session management
+│   ├── routes/
+│   │   └── ocr_routes.py      # OCR processing endpoints
 │   ├── nlp/
 │   │   └── indicbart.py       # NLLB Translation wrapper
 │   ├── rag/
@@ -132,10 +155,11 @@ Government-Scheme/
 │   └── data/                  # Vector DB & scheme data
 ├── frontend/
 │   ├── index.html             # Main chat interface
-│   ├── style.css              # Modern styling (dark/light mode)
+│   ├── style.css              # Main application styling
 │   ├── script.js              # Chat logic & UI interactions
-│   ├── signup.html            # User profile setup
-│   └── login.html             # User login
+│   ├── translations.js        # Static UI translations
+│   ├── signup.html            # Profile creation & editing
+│   └── login.html             # User authentication
 ├── requirements.txt           # Python dependencies
 └── README.md                  # This file
 ```
@@ -147,11 +171,12 @@ Government-Scheme/
 | `GET` | `/` | Serve main frontend |
 | `GET` | `/health` | Health check |
 | `POST` | `/chat` | Main chat endpoint |
-| `POST` | `/translate` | Translate single text |
-| `POST` | `/translate/batch` | Translate multiple texts |
-| `GET` | `/languages` | List supported languages |
+| `POST` | `/api/v1/ocr` | Process uploaded documents |
 | `POST` | `/profile` | Create user profile |
-| `GET` | `/auth/me` | Get current user info |
+| `POST` | `/edit` | Update user profile |
+| `POST` | `/auth/login` | User login |
+| `POST` | `/auth/logout` | User logout |
+| `GET` | `/auth/me` | Get current session info |
 
 ## 🐛 Troubleshooting
 
@@ -179,6 +204,10 @@ python backend/ingestion/ingestion_runner.py
 lsof -ti :8000 | xargs kill -9
 # On Windows, use Task Manager or Resource Monitor
 ```
+
+**5. OCR Errors**
+- Ensure Tesseract is installed and added to your system PATH.
+- `brew install tesseract` (Mac) or `sudo apt install tesseract-ocr` (Linux).
 
 ## 🤝 Contributing
 
