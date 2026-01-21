@@ -1203,11 +1203,7 @@ function handleOverlayClick(event) {
     }
 }
 
-function switchToSchemeFinderFromAuth(event) {
-    event.preventDefault();
-    closeAuthModal();
-    openSchemeFinderModal();
-}
+
 
 function switchToSignInFromScheme(event) {
     event.preventDefault();

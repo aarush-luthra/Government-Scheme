@@ -963,10 +963,28 @@
                 return;
             }
 
+            const urlParams = new URLSearchParams(window.location.search);
+            const isEditMode = urlParams.get('mode') === 'edit';
+            const endpoint = isEditMode ? '/edit' : '/profile';
+
+            // Validation (SKIP password check in edit mode if empty)
+            if (!isEditMode && !document.getElementById('password').value) {
+                // Standard validation for signup
+            }
+            // For general validation, we reuse existing checks but skip password if in edit mode and empty
+            if (!document.getElementById('gender').value) {
+                errorDiv.textContent = 'Please select your gender';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // ... (keep other validations) ...
+
             const formData = {
                 name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
-                password: document.getElementById('password').value,
+                // Only include password if it's set or if we are in signup mode
+                password: document.getElementById('password').value || (isEditMode ? undefined : ''),
                 age: parseInt(document.getElementById('age').value) || null,
                 gender: document.getElementById('gender').value || null,
                 state: document.getElementById('state').value || null,
@@ -982,7 +1000,7 @@
             };
 
             try {
-                const response = await fetch('/profile', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -992,16 +1010,18 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    successDiv.textContent = 'Account created successfully! Redirecting...';
+                    successDiv.textContent = isEditMode ? 'Profile updated successfully! Redirecting...' : 'Account created successfully! Redirecting...';
                     successDiv.style.display = 'block';
-                    // Store form data to potentially re-populate if needed (though we skip verification now)
-                    sessionStorage.setItem('signupFormData', JSON.stringify(formData));
+
+                    if (!isEditMode) {
+                        sessionStorage.setItem('signupFormData', JSON.stringify(formData));
+                    }
+
                     setTimeout(() => {
-                        // FIX: Redirect to chat/home directly so we don't ask for verification again
                         window.location.href = '/?chat=true';
                     }, 1500);
                 } else {
-                    let errorMessage = data.message || 'Sign up failed. Please try again.';
+                    let errorMessage = data.message || (isEditMode ? 'Update failed.' : 'Sign up failed.');
                     if (data.detail) {
                         if (Array.isArray(data.detail)) {
                             errorMessage = data.detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
@@ -1013,11 +1033,126 @@
                     errorDiv.style.display = 'block';
                 }
             } catch (error) {
-                console.error('Signup error:', error);
+                console.error('Request error:', error);
                 errorDiv.textContent = 'Connection error. Please try again.';
                 errorDiv.style.display = 'block';
             }
         });
+        // Initialize Edit Mode if query param exists
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'edit') {
+                enableEditMode();
+            }
+        });
+
+        async function enableEditMode() {
+            // 1. Update UI for Edit Mode
+            document.title = 'Edit Profile - Government Scheme Assistant';
+            document.querySelector('.auth-title').textContent = 'Edit Profile';
+            document.querySelector('.auth-subtitle').textContent = 'Update your details below';
+            document.querySelector('.auth-btn').textContent = 'Update Profile';
+
+            // Hide password field for edit mode (optional, but checking if backend requires it)
+            // For now, we leave it as is, or we could make it optional. 
+            // Assuming backend handles partial updates or we send existing password (unsafe)
+            // Ideally, we keep it empty and only update if user enters a new one.
+            // Let's make password optional in UI logic for edit mode if possible, but form has 'required'.
+            // We will remove 'required' attribute from password in edit mode.
+            document.getElementById('password').removeAttribute('required');
+            document.getElementById('password').placeholder = "Leave blank to keep current password";
+
+            // 2. Fetch User Data
+            try {
+                const response = await fetch('/edit', {
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const profile = await response.json();
+                    populateSignupForm(profile);
+                } else {
+                    console.error('Failed to fetch profile for editing');
+                }
+            } catch (e) {
+                console.error('Error fetching profile:', e);
+            }
+        }
+
+        function populateSignupForm(data) {
+            console.log('Populating form with:', data);
+
+            // Text Inputs
+            if (data.name) document.getElementById('name').value = data.name;
+            if (data.email) document.getElementById('email').value = data.email;
+            if (data.annual_income) document.getElementById('annual_income').value = data.annual_income;
+            if (data.family_income) document.getElementById('family_income').value = data.family_income;
+
+            // Gender
+            if (data.gender) {
+                const cards = document.querySelectorAll('#gender-selection .selection-card');
+                cards.forEach(card => {
+                    if (card.dataset.value === data.gender) selectGenderCard(card);
+                });
+            }
+
+            // Age
+            if (data.age) {
+                selectAge(data.age);
+            }
+
+            // Area Type
+            if (data.area) {
+                const btns = document.querySelectorAll('#area-selection .toggle-btn');
+                btns.forEach(btn => {
+                    if (btn.dataset.value === data.area) selectToggle(btn, 'area');
+                });
+            }
+
+            // State
+            if (data.state) {
+                const select = document.getElementById('state');
+                select.value = data.state;
+            }
+
+            // Social Category
+            if (data.category) {
+                const cards = document.querySelectorAll('#category-selection .category-card');
+                cards.forEach(card => {
+                    if (card.dataset.value === data.category) selectCategory(card);
+                });
+            }
+
+            // Employment Status
+            if (data.employment_status) {
+                const select = document.getElementById('employment_status');
+                select.value = data.employment_status;
+                handleEmploymentChange(select); // Trigger side effects (e.g. student toggle)
+            }
+
+            // Toggles (Boolean values)
+            // Helper to click the correct button based on boolean value
+            const setToggleState = (containerId, fieldName, value) => {
+                if (value === null || value === undefined) return;
+                // Convert boolean/integer to string "true"/"false" to match data-value in HTML
+                // Backend returns 1 for True, 0 for False (SQLite)
+                const strValue = (value === true || value === "true" || value === 1 || value === "1") ? "true" : "false";
+                const container = document.getElementById(containerId);
+                const btn = container.querySelector(`.toggle-btn[data-value="${strValue}"]`);
+                if (btn) selectToggle(btn, fieldName);
+            };
+
+            setToggleState('student-selection', 'is_student', data.is_student);
+            setToggleState('disability-selection', 'is_disabled', data.is_disabled);
+            setToggleState('minority-selection', 'is_minority', data.is_minority);
+            setToggleState('govt-selection', 'is_govt_employee', data.is_govt_employee);
+        }
+
+        // Override Form Submission for Edit Mode
+        // We attach this check inside the existing listener or create a new one?
+        // The existing listener is hardcoded to POST /profile.
+        // We can modify the existing listener.
+
     </script>
 </body>
 

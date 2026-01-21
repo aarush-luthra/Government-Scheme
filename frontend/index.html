@@ -542,7 +542,8 @@
 
                     <div id="user-menu" class="user-menu hidden">
                         <span id="user-name-display" data-i18n="user-name-display"></span>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="openSchemeFinderModal('edit')"
+                        <button type="button" class="btn btn-ghost btn-sm"
+                            onclick="window.location.href='/profile?mode=edit'; return false;"
                             style="margin-right: 0.5rem;" data-i18n="edit_profile">Edit Profile</button>
                         <button class="btn btn-ghost btn-sm" onclick="handleLogout()" data-i18n="logout">Logout</button>
                     </div>
@@ -980,7 +981,8 @@
                 <div class="form-footer">
                     <span data-i18n="auth_msg_no_account">Don't have an account?</span>
 
-                    <a href="#" onclick="switchToSchemeFinderFromAuth(event)" data-i18n="auth_link_signup">Sign Up</a>
+                    <a href="/profile" onclick="window.location.href='/profile'; return false;"
+                        data-i18n="auth_link_signup">Sign Up</a>
                 </div>
             </div>
 
@@ -1088,7 +1090,7 @@
     </div>
 
     <!-- JS -->
-    <script src="/static/script.js?v=5"></script>
+    <script src="/static/script.js?v=6"></script>
 
 </body>
 
