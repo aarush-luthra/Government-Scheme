@@ -137,6 +137,43 @@ Open your browser to: **[http://localhost:8000](http://localhost:8000)**
     └───────────────┘              └───────────────┘      └───────────────┘
 ```
 
+### System Components
+
+The system follows a modular architecture orchestrated by FastAPI.
+
+#### 1. 🖥️ Frontend Layer (Client)
+- **Technology:** Vanilla JavaScript (ES6+), HTML5, CSS3.
+- **Responsibilities:**
+  - **Dynamic State:** Manages chat history and user session state via `script.js`.
+  - **Localization:** `translations.js` maps UI elements to 15+ languages instantly without reloading.
+  - **Smart Forms:** `signup.html` includes logic to parse OCR responses and auto-populate user details.
+
+#### 2. 🔌 Backend API Layer (Server)
+- **Technology:** FastAPI (Python 3.12).
+- **Role:** Central orchestrator handling HTTP requests, WebSocket management (if applicable), and routing.
+- **Security:** Implements session-based authentication using secure HTTP-only cookies and bcrypt for password hashing.
+
+#### 3. 🧠 Intelligence Layer (Core AI)
+- **Translation Engine (NLLB-200):**
+  - **Model:** `facebook/nllb-200-distilled-600M` optimized with INT8 quantization for CPU efficiency.
+  - **Function:** Handles bi-directional translation (Indic ↔ English) to allow the English-based RAG system to serve users in their native language.
+  
+- **RAG Engine (Retrieval):**
+  - **Vector Store:** `FAISS` index containing embeddings for 19,000+ government scheme documents.
+  - **Retriever:** Implements **Profile-Aware Retrieval**, filtering schemes based on the user's metadata (age, state, category) *before* semantic search.
+  - **Generator:** Uses `GPT-4o-mini` to synthesize a natural language response from the retrieved context.
+
+- **OCR Service:**
+  - **Pipeline:** `PDF2Image` → `Pillow` (Preprocessing) → `Tesseract`/`EasyOCR`.
+  - **Function:** Extracts structured data (Name, DOB, Income) from uploaded identity documents (Aadhaar/PAN).
+
+#### 4. 🗄️ Data Layer
+- **Vector Database:** Local FAISS index (`.faiss`) for fast similarity search.
+- **Relational DB:** `SQLite` (`user_data/user.db`) for storing:
+  - User Profiles & Preferences.
+  - Active Session Tokens.
+  - Chat History (JSON-based storage for chat context).
+
 ## 📂 Project Structure
 
 ```
