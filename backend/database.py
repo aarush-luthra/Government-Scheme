@@ -1,74 +1,91 @@
 """
-User Database Module
-SQLite database for persistent user storage with chat history JSON file management.
+User Database Module (PostgreSQL)
+Stateless database implementation for Render deployment.
 """
 
-import sqlite3
-import json
 import os
+import uuid
+import json
+import logging
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-import uuid
 
-# Database and chat history paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-USER_DATA_DIR = os.path.join(BASE_DIR, "user_data")
-DB_PATH = os.path.join(USER_DATA_DIR, "user.db")
-CHAT_HISTORY_DIR = os.path.join(USER_DATA_DIR, "chat_history")
-
-# Ensure directories exist
-os.makedirs(USER_DATA_DIR, exist_ok=True)
-os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
-
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def get_db_connection():
-    """Get a connection to the SQLite database."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
+    """Get a connection to the PostgreSQL database."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        logger.error("DATABASE_URL environment variable not set!")
+        raise ValueError("DATABASE_URL not set")
+    
+    try:
+        conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        return conn
+    except Exception as e:
+        logger.error(f"Failed to connect to database: {e}")
+        raise
 
 def init_db():
     """Initialize the database with required tables."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            name TEXT NOT NULL,
-            gender TEXT,
-            age INTEGER,
-            state TEXT,
-            area TEXT,
-            category TEXT,
-            is_disabled INTEGER DEFAULT 0,
-            is_minority INTEGER DEFAULT 0,
-            is_student INTEGER DEFAULT 0,
-            employment_status TEXT,
-            is_govt_employee INTEGER DEFAULT 0,
-            annual_income INTEGER,
-            family_income INTEGER,
-            chat_history_file TEXT,
-            created_at TEXT NOT NULL
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS sessions (
-            session_id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # User Table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                name TEXT NOT NULL,
+                gender TEXT,
+                age INTEGER,
+                state TEXT,
+                area TEXT,
+                category TEXT,
+                is_disabled BOOLEAN DEFAULT FALSE,
+                is_minority BOOLEAN DEFAULT FALSE,
+                is_student BOOLEAN DEFAULT FALSE,
+                employment_status TEXT,
+                is_govt_employee BOOLEAN DEFAULT FALSE,
+                annual_income INTEGER,
+                family_income INTEGER,
+                created_at TIMESTAMP NOT NULL
+            )
+        ''')
+        
+        # Sessions Table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                email TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL
+            )
+        ''')
+        
+        # Chat History Table (New)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                timestamp TIMESTAMP NOT NULL
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+        logger.info("Database initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
 
 # ============ User CRUD Operations ============
 
@@ -90,219 +107,265 @@ def create_user(
     family_income: Optional[int] = None
 ) -> Optional[Dict[str, Any]]:
     """Create a new user in the database."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    conn = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
         user_id = str(uuid.uuid4())
-        chat_history_file = f"{user_id}.json"
-        created_at = datetime.now().isoformat()
+        created_at = datetime.now()
         
         cursor.execute('''
             INSERT INTO users (
                 id, email, password, name, gender, age, state, area, category,
                 is_disabled, is_minority, is_student, employment_status,
-                is_govt_employee, annual_income, family_income, chat_history_file, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                is_govt_employee, annual_income, family_income, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (
             user_id, email.lower().strip(), password, name, gender, age, state, area, category,
-            1 if is_disabled else 0,
-            1 if is_minority else 0,
-            1 if is_student else 0,
-            employment_status,
-            1 if is_govt_employee else 0,
-            annual_income, family_income, chat_history_file, created_at
+            is_disabled, is_minority, is_student, employment_status,
+            is_govt_employee, annual_income, family_income, created_at
         ))
         
         conn.commit()
         
-        # Create empty chat history file
-        chat_file_path = os.path.join(CHAT_HISTORY_DIR, chat_history_file)
-        with open(chat_file_path, 'w', encoding='utf-8') as f:
-            json.dump([], f)
-        
         return {
             "user_id": user_id,
             "email": email.lower().strip(),
-            "name": name,
-            "chat_history_file": chat_history_file
+            "name": name
         }
         
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
+        if conn:
+            conn.rollback()
         return None  # Email already exists
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        if conn:
+            conn.rollback()
+        return None
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     """Get user by email address."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM users WHERE email = ?', (email.lower().strip(),))
-    row = cursor.fetchone()
-    conn.close()
-    
-    if row:
-        return dict(row)
-    return None
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM users WHERE email = %s', (email.lower().strip(),))
+        row = cursor.fetchone()
+        
+        if row:
+            return dict(row)
+        return None
+    except Exception as e:
+        logger.error(f"Error getting user by email: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
     """Get user by ID."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    
-    if row:
-        return dict(row)
-    return None
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+        row = cursor.fetchone()
+        
+        if row:
+            return dict(row)
+        return None
+    except Exception as e:
+        logger.error(f"Error getting user by ID: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def update_user(email: str, **kwargs) -> bool:
     """Update user profile fields."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Build dynamic update query
-    updates = []
-    values = []
-    
-    for key, value in kwargs.items():
-        if value is not None:
-            # Convert booleans to integers for SQLite
-            if isinstance(value, bool):
-                value = 1 if value else 0
-            updates.append(f"{key} = ?")
-            values.append(value)
-    
-    if not updates:
-        conn.close()
-        return True
-    
-    values.append(email.lower().strip())
-    query = f"UPDATE users SET {', '.join(updates)} WHERE email = ?"
-    
-    cursor.execute(query, values)
-    conn.commit()
-    affected = cursor.rowcount
-    
-    if affected == 0:
-        # Check if user exists to distinguish between "not found" and "no changes"
-        cursor.execute('SELECT 1 FROM users WHERE email = ?', (email.lower().strip(),))
-        if cursor.fetchone():
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Build dynamic update query
+        updates = []
+        values = []
+        
+        for key, value in kwargs.items():
+            if value is not None:
+                updates.append(f"{key} = %s")
+                values.append(value)
+        
+        if not updates:
+            return True
+        
+        values.append(email.lower().strip())
+        query = f"UPDATE users SET {', '.join(updates)} WHERE email = %s"
+        
+        cursor.execute(query, values)
+        conn.commit()
+        affected = cursor.rowcount
+        
+        if affected == 0:
+            # Check if user exists
+            cursor.execute('SELECT 1 FROM users WHERE email = %s', (email.lower().strip(),))
+            if cursor.fetchone():
+                return True # User exists, no changes needed
+                
+        return affected > 0
+    except Exception as e:
+        logger.error(f"Error updating user: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
             conn.close()
-            return True # User exists, so it was just "no changes"
-            
-    conn.close()
-    
-    return affected > 0
 
 
 # ============ Session Management ============
 
 def create_session(user_id: str, email: str) -> str:
     """Create a new session for a user."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    session_id = str(uuid.uuid4())
-    created_at = datetime.now().isoformat()
-    
-    cursor.execute('''
-        INSERT INTO sessions (session_id, user_id, email, created_at)
-        VALUES (?, ?, ?, ?)
-    ''', (session_id, user_id, email.lower().strip(), created_at))
-    
-    conn.commit()
-    conn.close()
-    
-    return session_id
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        session_id = str(uuid.uuid4())
+        created_at = datetime.now()
+        
+        cursor.execute('''
+            INSERT INTO sessions (session_id, user_id, email, created_at)
+            VALUES (%s, %s, %s, %s)
+        ''', (session_id, user_id, email.lower().strip(), created_at))
+        
+        conn.commit()
+        return session_id
+    except Exception as e:
+        logger.error(f"Error creating session: {e}")
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 
 def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     """Get session by session_id."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM sessions WHERE session_id = ?', (session_id,))
-    row = cursor.fetchone()
-    conn.close()
-    
-    if row:
-        return dict(row)
-    return None
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM sessions WHERE session_id = %s', (session_id,))
+        row = cursor.fetchone()
+        
+        if row:
+            return dict(row)
+        return None
+    except Exception as e:
+        logger.error(f"Error getting session: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def delete_session(session_id: str) -> bool:
     """Delete a session."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('DELETE FROM sessions WHERE session_id = ?', (session_id,))
-    conn.commit()
-    affected = cursor.rowcount
-    conn.close()
-    
-    return affected > 0
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('DELETE FROM sessions WHERE session_id = %s', (session_id,))
+        conn.commit()
+        affected = cursor.rowcount
+        return affected > 0
+    except Exception as e:
+        logger.error(f"Error deleting session: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 
 # ============ Chat History Management ============
 
 def get_chat_history(user_id: str) -> List[Dict[str, str]]:
     """Get chat history for a user."""
-    user = get_user_by_id(user_id)
-    if not user or not user.get('chat_history_file'):
-        return []
-    
-    chat_file_path = os.path.join(CHAT_HISTORY_DIR, user['chat_history_file'])
-    
-    if not os.path.exists(chat_file_path):
-        return []
-    
+    conn = None
     try:
-        with open(chat_file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get last 50 messages ordered by time
+        cursor.execute('''
+            SELECT question, answer, timestamp 
+            FROM chat_history 
+            WHERE user_id = %s 
+            ORDER BY timestamp ASC 
+            LIMIT 50
+        ''', (user_id,))
+        
+        rows = cursor.fetchall()
+        
+        history = []
+        for row in rows:
+            history.append({
+                "question": row["question"],
+                "answer": row["answer"],
+                "timestamp": row["timestamp"].isoformat() if isinstance(row["timestamp"], datetime) else row["timestamp"]
+            })
+            
+        return history
+    except Exception as e:
+        logger.error(f"Error getting chat history: {e}")
         return []
+    finally:
+        if conn:
+            conn.close()
 
 
 def append_chat_entry(user_id: str, question: str, answer: str) -> bool:
     """Append a Q&A entry to the user's chat history."""
-    user = get_user_by_id(user_id)
-    if not user or not user.get('chat_history_file'):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        timestamp = datetime.now()
+        
+        cursor.execute('''
+            INSERT INTO chat_history (user_id, question, answer, timestamp)
+            VALUES (%s, %s, %s, %s)
+        ''', (user_id, question, answer, timestamp))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error appending chat entry: {e}")
+        if conn:
+            conn.rollback()
         return False
-    
-    chat_file_path = os.path.join(CHAT_HISTORY_DIR, user['chat_history_file'])
-    
-    # Load existing history
-    history = []
-    if os.path.exists(chat_file_path):
-        try:
-            with open(chat_file_path, 'r', encoding='utf-8') as f:
-                history = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            history = []
-    
-    # Append new entry
-    history.append({
-        "question": question,
-        "answer": answer,
-        "timestamp": datetime.now().isoformat()
-    })
-    
-    # Keep only last 50 entries to prevent file from growing too large
-    if len(history) > 50:
-        history = history[-50:]
-    
-    # Save updated history
-    with open(chat_file_path, 'w', encoding='utf-8') as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
-    
-    return True
+    finally:
+        if conn:
+            conn.close()
 
 
 def get_user_profile_for_chat(user_id: str) -> Optional[Dict[str, Any]]:
@@ -328,5 +391,8 @@ def get_user_profile_for_chat(user_id: str) -> Optional[Dict[str, Any]]:
     }
 
 
-# Initialize database on module import
-init_db()
+# Attempt initialization if URL is set (safe import)
+if os.getenv("DATABASE_URL"):
+    init_db()
+else:
+    logger.warning("DATABASE_URL not set. Database not initialized.")
