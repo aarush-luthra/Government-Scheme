@@ -6,81 +6,43 @@ from langchain_core.documents import Document
 # Initialize OpenAI client once
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-# --- SYSTEM PROMPT (Strictly enforced by SchemeMatcher logic) ---
-SYSTEM_PROMPT = """You are an expert Government Scheme Recommendation Assistant for Indian citizens.
+# --- SYSTEM PROMPTS ---
+SIGNED_IN_SYSTEM_PROMPT = """You are an expert Government Scheme Recommendation Assistant for Indian citizens.
 
-YOUR PRIMARY ROLE:
-You help users find and understand government schemes.
+You are in SIGNED-IN mode. Provide personalized and actionable guidance.
 
-INTENT VS ELIGIBILITY PROTOCOL:
-1. **CASE A: Informational / Specific Topic Queries** (DEFAULT MODE)
-   - **Examples:** "Schemes for farmers", "Details about PM Kisan", "Education loans", "What is available?"
-   - **ACTION:** SHOW ALL MATCHES provided in the context.
-   - **RULE:** If a scheme matches the topic but has `⛔` (Ineligible per profile), SHOW IT anyway.
-   - **WARNING:** Preface incompatible schemes with: *"Note: Based on your profile, you may not be eligible for this, but here are the details..."*
-
-2. **CASE B: Specific "For Me" / Eligibility Queries** (STRICT MODE)
-   - **Trigger Keywords:** "for me", "am I eligible", "my eligible schemes", "what can I apply for".
-   - **ACTION:** STRICT FILTERING.
-   - **RULE:** HIDE schemes with `⛔` (Hard Filter Fail).
-   - **OUTPUT:** If nothing matches, say "I couldn't find schemes purely matching your profile."
-
-3. **CASE C: Specific Scheme Lookup**
-   - **Examples:** "Tell me about [Scheme Name]", "How to apply for [Scheme Name]", "[Scheme Name]".
-   - **ACTION:** Prioritize the EXACT match.
-   - **RULE:** If the context contains the specific scheme requested, show THAT ONE first and predominantly.
-   - **RULE:** Only list other retrieved schemes if they are highly relevant alternatives. If they are just vector search noise, ignore them.
-
-ELIGIBILITY LOGIC (Review [ELIGIBILITY CHECKS] in scheme context):
-- **⛔ HARD FILTERS:** User is technically ineligible.
-- **✅ MATCHES:** Perfect match.
-
-RESPONSE FORMAT:
-**[Scheme Name]**
-- **Status**: [Eligible ✅ / Not Eligible ⛔ / Info Only (Guest)]
-- **Reason**: [Explain match/mismatch from [ELIGIBILITY CHECKS]]
-- **Details**: [Benefits]
-- **Links**: [Official/Apply] (If 'Links Not Provided', write 'Not Provided'. DO NOT use '#')
-
-DYNAMIC ADAPTATION (Override above format if user asks for specific aspects):
-- **If user asks "How to apply for X"**: Show ONLY the **Application Process** and **Links**. Omit eligibility/benefits unless critical.
-- **If user asks "Eligibility for X"**: Show ONLY the **Eligibility Criteria** and **Status (✅/⛔)**. Omit application process.
-- **If user asks "Benefits of X"**: Show ONLY the **Benefits/Details**.
-
-CONVERSATIONAL GUIDELINES:
-- **Default to Helpful:** If unsure of intent, show the information with a warning.
-- **Single Source of Truth:** Only use provided schemes. Do NOT invent links.
+MANDATORY RULES:
+1. Use ONLY the schemes present in the provided context.
+2. Never invent links, deadlines, or document requirements.
+3. For each scheme, provide:
+   - Status: Eligible ✅ / Possibly Eligible ⚠️ / Not Eligible ❌
+   - Why this status was assigned (from eligibility checks and profile)
+   - Benefits (short)
+   - Required documents (if available, otherwise "Not clearly listed")
+   - Deadline (if available, otherwise "Not specified")
+   - Official/apply link (if present, otherwise "Not Provided")
+4. If user asks for one scheme specifically, prioritize that scheme and keep alternatives minimal.
+5. Keep answer concise and practical.
 """
 
+GUEST_SYSTEM_PROMPT = """You are an expert Government Scheme Recommendation Assistant for Indian citizens.
 
-GENERAL_SYSTEM_PROMPT = """You are a helpful and friendly Government Scheme Assistant for India.
-- Your goal is to help users find government schemes they are eligible for.
-- If the user asks general questions ("How are you?", "Who are you?"), allow casual conversation but gently steer them back to finding schemes.
-- Do NOT halluncinate specific scheme details. If asked about a scheme, say you need to look it up (which will happen in the next turn if they ask correctly).
-- Keep responses concise and encouraging.
+You are in GUEST mode. Keep answers exploratory, low-friction, and informational.
+
+MANDATORY RULES:
+1. Use ONLY the schemes present in context.
+2. Do not claim final eligibility. Use:
+   - Likely Eligible ✅
+   - Possibly Eligible ⚠️
+   - Might Not Be Eligible ❌
+3. For each scheme include:
+   - Scheme name
+   - One-line description
+   - Major benefits
+   - High-level eligibility summary
+4. Keep recommendations informational and concise. Do not output repetitive closing lines.
+5. Keep it simple and avoid asking for documents or sensitive IDs.
 """
-
-
-def generate_general_reply(user_question: str, history: Optional[List[Dict[str, str]]] = None) -> str:
-    """
-    Generate a reply for general conversation (greeting, help, small talk) without RAG context.
-    Disables strict filtering mode for a more natural conversation.
-    """
-    messages = [{"role": "system", "content": GENERAL_SYSTEM_PROMPT}]
-    
-    if history:
-        for msg in history[-3:]:
-             if msg.get("content"):
-                messages.append({"role": msg.get("role"), "content": msg.get("content")})
-    
-    messages.append({"role": "user", "content": user_question})
-    
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        temperature=0.7, 
-    )
-    return response.choices[0].message.content.strip()
 
 
 def format_docs_for_context(documents: List[Document]) -> str:
@@ -100,12 +62,24 @@ def format_docs_for_context(documents: List[Document]) -> str:
         
         # This key 'eligibility_reasons' is populated by SchemeMatcher.rank_schemes()
         reasons = doc.metadata.get("eligibility_reasons", "No automated checks performed.")
+        confidence = doc.metadata.get("match_confidence")
+        if confidence is None:
+            status_hint = "Possibly Eligible ⚠️"
+        elif float(confidence) >= 0.75:
+            status_hint = "Eligible ✅"
+        elif float(confidence) >= 0.4:
+            status_hint = "Possibly Eligible ⚠️"
+        else:
+            status_hint = "Not Eligible ❌"
         content = doc.page_content.strip()
         
         # Build context block
         block = f"""
         SCHEME {i}: {name}
         ------------------------------------------
+        [STATUS HINT]:
+        {status_hint}
+
         [ELIGIBILITY CHECKS - SYSTEM LOGIC]:
         {reasons}
         
@@ -118,7 +92,7 @@ def format_docs_for_context(documents: List[Document]) -> str:
     return "\n".join(context_parts)
 
 
-def generate_answer(user_question: str, context_documents: List[Document], history: Optional[List[Dict[str, str]]] = None, user_profile: Optional[Dict] = None) -> str:
+def generate_answer(user_question: str, context_documents: List[Document], history: Optional[List[Dict[str, str]]] = None, user_profile: Optional[Dict] = None, mode: str = "signed_in") -> str:
     """
     Generate an answer using the LLM with strict eligibility matching.
     
@@ -132,8 +106,8 @@ def generate_answer(user_question: str, context_documents: List[Document], histo
     formatted_context = format_docs_for_context(context_documents)
     
     # 2. Build system prompt with user profile context
-    system_content = SYSTEM_PROMPT
-    if user_profile:
+    system_content = SIGNED_IN_SYSTEM_PROMPT if mode == "signed_in" else GUEST_SYSTEM_PROMPT
+    if user_profile and mode == "signed_in":
         profile_context = build_profile_context(user_profile)
         if profile_context:
             system_content += f"\n\nUSER PROFILE (For Reference):\n{profile_context}"
@@ -154,25 +128,11 @@ def generate_answer(user_question: str, context_documents: List[Document], histo
     USER QUESTION:
     {user_question}
     
-    INSTRUCTIONS:
-    - Review the [ELIGIBILITY CHECKS] for each scheme.
-    - If a scheme has "⛔", DO NOT recommend it as a valid option.
-    - If a scheme has "✅", prioritize it.
-    - If a scheme has "✅", prioritize it.
-    - **LINKS STRATEGY:** ONLY output official URLs (starting with http/https) that are EXPLICITLY provided in the Scheme Content.
-    - DO NOT HALLUCINATE LINKS. Do not invent "Apply Here", "User Manual", or "Login" links if the URL is not in the text.
-    - If no HTTP link is found, write "Official links not provided in database."
-    
-    IMPORTANT USER CONTEXT:
-    { "User is a GUEST (No Profile). DEFAULT Status is 'Info Only'. HOWEVER, if the user provides specific details (Age, State, Qualification, Category) in the chat, YOU MUST ESTIMATE ELIGIBILITY. Mark as 'Likely Eligible ✅' or 'Likely Not Eligible ⛔' based on the provided details." if not user_profile else "User is LOGGED IN. You MUST determine eligibility status (✅/⛔) based on the [ELIGIBILITY CHECKS]. \n    CONVERSATIONAL OVERRIDE: If the user provides NEW profile details (e.g. 'I have 2 hectares land') in the chat history that fixes a previous rejection reason, YOU MUST RE-EVALUATE eligibility using the new info. OVERRIDE the system's '⛔' status to 'Verified Eligible ✅' if the new info satisfies the criteria found in the Scheme Content or previous messages." }
-    
-    FOCUS INSTRUCTIONS:
-    {
-    "User asked for ELIGIBILITY CRITERIA specifically. Output ONLY the Eligibility Criteria and Status. Do NOT show Application Process or Benefits. IGNORE schemes that are not an exact match to the requested name." if any(k in user_question.lower() for k in ["eligibility criteria", "who can apply", "criteria for", "check eligibility"]) else
-    "User asked for APPLICATION PROCESS. Output ONLY the Application Steps and Links. Do NOT show Eligibility or Benefits. IGNORE schemes that are not an exact match." if any(k in user_question.lower() for k in ["how to apply", "application", "procedure", "apply"]) else
-    "User asked for BENEFITS. Output ONLY the Benefits/Details. IGNORE schemes that are not an exact match." if any(k in user_question.lower() for k in ["benefit", "what do i get", "amount", "incentive"]) else
-    "COMPREHENSIVE MODE (Default): The user wants to know about schemes. Filter strictly: ONLY show schemes where Status is 'Eligible ✅'. DO NOT show 'Not Eligible ⛔' schemes. Limit to the TOP 3 most relevant schemes. For each, provide: 1. Status 2. Description/Benefits 3. Criteria 4. Application 5. Links."
-    }
+    OUTPUT INSTRUCTIONS:
+    - Review [STATUS HINT] and [ELIGIBILITY CHECKS] while writing status.
+    - Keep to top 3 schemes unless user asks for more.
+    - For links: only include explicit http/https links from context, else "Not Provided".
+    - If no relevant scheme exists, clearly say so and suggest refining by state/category.
     """
     
     messages.append({"role": "user", "content": user_message})

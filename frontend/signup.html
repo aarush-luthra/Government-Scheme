@@ -750,6 +750,7 @@
     </div>
 
     <script>
+        const API_BASE_URL = '';
         // Generate age options
         console.log('Generating age options 0-100');
         const ageOptions = document.getElementById('age-options');
@@ -799,7 +800,7 @@
                 const formData = new FormData();
                 formData.append('file', file);
 
-                const response = await fetch('/api/v1/ocr', {
+                const response = await fetch(API_BASE_URL + '/api/v1/ocr', {
                     method: 'POST',
                     body: formData
                 });
@@ -1064,8 +1065,9 @@
 
             // 2. Fetch User Data
             try {
-                const response = await fetch('/edit', {
-                    headers: { 'Accept': 'application/json' }
+                const response = await fetch(API_BASE_URL + '/edit', {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include'
                 });
 
                 if (response.ok) {

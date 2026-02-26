@@ -1,0 +1,133 @@
+:root {
+  font-family: "IBM Plex Sans", sans-serif;
+  color: #172833;
+  background: linear-gradient(140deg, #f2f7f5, #e6f1fb);
+}
+
+body {
+  margin: 0;
+}
+
+.nav {
+  display: flex;
+  gap: 0.8rem;
+  padding: 1rem;
+  background: #10384f;
+}
+
+.nav a, .nav button {
+  color: #f4f7fa;
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid #87acc4;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+
+.layout {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.layout.small {
+  max-width: 440px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #d5dde5;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid.two {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search-wrap {
+  position: relative;
+}
+
+.suggestions {
+  margin: 0.25rem 0;
+  padding: 0.25rem;
+  border: 1px solid #c9d7e2;
+  background: #f7fbff;
+  max-height: 180px;
+  overflow: auto;
+  list-style: none;
+}
+
+.suggestion-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #12384f;
+  border: none;
+  padding: 0.4rem;
+}
+
+.muted {
+  color: #5f6d78;
+}
+
+input {
+  width: 100%;
+  padding: 0.45rem;
+  border: 1px solid #b5c4cf;
+}
+
+button {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #2f6f92;
+  background: #1e5f82;
+  color: #fff;
+  cursor: pointer;
+}
+
+.error {
+  color: #b00020;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: grid;
+  place-items: center;
+}
+
+.modal {
+  max-width: 480px;
+}
+
+.compare-modal {
+  max-width: 860px;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #d2dbe3;
+  padding: 0.4rem;
+  text-align: left;
+  vertical-align: top;
+}

@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Saved Schemes — GovScheme</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #F3F4F6;
+      --bg-card: #FFFFFF;
+      --border: #E5E7EB;
+      --text: #1A1A1A;
+      --text-muted: #6B7280;
+      --text-dim: #9CA3AF;
+      --accent: #047857;
+      --accent-light: #10b981;
+      --green: #059669;
+      --green-bg: rgba(5, 150, 105, 0.08);
+      --red: #DC2626;
+      --red-bg: rgba(220, 38, 38, 0.06);
+      --amber: #D97706;
+      --amber-bg: rgba(217, 119, 6, 0.06);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-full: 9999px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Navbar */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 48px;
+      height: 72px;
+      background: var(--bg-card);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-logo {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .nav-logo svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .nav-badge {
+      background: var(--accent-light);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-full);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg-card);
+    }
+
+    .btn-primary:hover {
+      background: black;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text);
+    }
+
+    .btn-green {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-green:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border-color: rgba(220, 38, 38, 0.2);
+    }
+
+    .btn-danger:hover {
+      background: var(--red);
+      color: white;
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 0.82rem;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Stats Row */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      box-shadow: var(--shadow);
+    }
+
+    .stat-chip strong {
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    /* Cards */
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    .scheme-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .scheme-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .scheme-info {
+      flex: 1;
+    }
+
+    .scheme-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scheme-name svg {
+      color: var(--accent-light);
+      flex-shrink: 0;
+    }
+
+    .scheme-meta {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .scheme-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .scheme-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    /* Pill */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    .pill-green {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .pill-amber {
+      background: var(--amber-bg);
+      color: var(--amber);
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .empty-state svg {
+      margin-bottom: 16px;
+      color: var(--text-dim);
+      opacity: 0.4;
+    }
+
+    .empty-state h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* Auth Wall */
+    .auth-wall {
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    .auth-wall h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .auth-wall p {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    /* Animations */
+    .fade-in {
+      animation: fadeInUp 0.35s ease;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .navbar {
+        padding: 12px 16px;
+      }
+
+      .container {
+        padding: 16px;
+      }
+
+      .scheme-card {
+        flex-direction: column;
+      }
+
+      .scheme-actions {
+        align-self: flex-end;
+      }
+
+      .stats-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="/" class="nav-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="2" x2="12" y2="22" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+          <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
+        </svg>
+        <span>GovScheme</span>
+      </a>
+      <span class="nav-badge">Saved Schemes</span>
+    </div>
+    <div class="nav-right">
+      <button class="btn btn-green btn-sm" id="export-pdf-btn" style="display:none;"
+        onclick="exportSavedSchemesPDF()">Export PDF</button>
+      <button class="btn btn-outline btn-sm" onclick="window.location.href='/'">← Back to Chat</button>
+    </div>
+  </nav>
+
+  <div class="container" id="main-content">
+    <!-- Auth wall if not logged in -->
+    <div id="auth-wall" class="auth-wall" style="display:none;">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#9ca3af" stroke-width="1.5">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      </svg>
+      <h2>Sign in to view saved schemes</h2>
+      <p>Save schemes from the chat and view them all here.</p>
+      <button class="btn btn-green" onclick="window.location.href='/auth/login'">Sign In</button>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" style="display:none;" class="fade-in">
+      <div class="page-header">
+        <h1 class="page-title">My Saved Schemes</h1>
+        <p class="page-subtitle">Schemes you've bookmarked from the chat assistant</p>
+      </div>
+
+      <div class="stats-row" id="stats-row">
+        <div class="stat-chip">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+          <span>Saved: <strong id="stat-saved">0</strong></span>
+        </div>
+        <div class="stat-chip">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>Reminders: <strong id="stat-reminders">0</strong></span>
+        </div>
+        <div class="stat-chip">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <span>Alerts: <strong id="stat-alerts">0</strong></span>
+        </div>
+      </div>
+
+      <!-- Saved Schemes -->
+      <div class="section">
+        <div class="section-title">Bookmarked Schemes</div>
+        <div id="saved-list"></div>
+      </div>
+
+      <!-- Reminders -->
+      <div class="section">
+        <div class="section-title">Reminders</div>
+        <div id="reminder-list"></div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="section">
+        <div class="section-title">Alert Subscriptions</div>
+        <div id="alert-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch(API + '/api/v1/saved-dashboard', { credentials: 'include' });
+        if (!res.ok) {
+          document.getElementById('auth-wall').style.display = 'block';
+          document.getElementById('dashboard').style.display = 'none';
+          return;
+        }
+        document.getElementById('auth-wall').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+
+        const data = await res.json();
+        const saved = data.saved_schemes || [];
+        const reminders = data.reminders || [];
+        const alerts = data.alerts || [];
+
+        // Stats
+        document.getElementById('stat-saved').textContent = saved.length;
+        document.getElementById('stat-reminders').textContent = reminders.length;
+        document.getElementById('stat-alerts').textContent = alerts.length;
+
+        // Saved Schemes
+        const savedEl = document.getElementById('saved-list');
+        if (saved.length === 0) {
+          savedEl.innerHTML = `<div class="empty-state">
+                        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <h3>No saved schemes yet</h3>
+                        <p>Ask the assistant about schemes and click the bookmark icon next to any scheme name to save it here.</p>
+                        <button class="btn btn-green" onclick="window.location.href='/?chat=true'">Start Chatting</button>
+                    </div>`;
+        } else {
+          savedEl.innerHTML = saved.map(s => `
+                        <div class="scheme-card fade-in">
+                            <div class="scheme-info">
+                                <div class="scheme-name">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                                    ${esc(s.scheme_name)}
+                                </div>
+                                <div class="scheme-meta">
+                                    <span><span class="pill pill-green"><span class="pill-dot"></span>${s.status || 'saved'}</span></span>
+                                    ${s.deadline ? `<span>Deadline: ${s.deadline}</span>` : ''}
+                                    ${s.last_checked ? `<span>Checked: ${s.last_checked}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="scheme-actions">
+                                <button class="btn btn-outline btn-sm" onclick="askAbout('${esc(s.scheme_name)}')">Ask AI</button>
+                                <button class="btn btn-danger btn-sm" onclick="removeSaved('${encodeURIComponent(s.scheme_name)}')">Remove</button>
+                            </div>
+                        </div>
+                    `).join('');
+        }
+
+        // Reminders
+        const reminderEl = document.getElementById('reminder-list');
+        if (reminders.length === 0) {
+          reminderEl.innerHTML = `<div class="empty-state" style="padding: 30px;">
+                        <p style="margin:0;">No reminders set. Reminders will appear here when you set them.</p>
+                    </div>`;
+        } else {
+          reminderEl.innerHTML = reminders.map(r => `
+                        <div class="scheme-card fade-in">
+                            <div class="scheme-info">
+                                <div class="scheme-name" style="font-size: 0.95rem;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    ${esc(r.reminder_text)}
+                                </div>
+                                <div class="scheme-meta">
+                                    <span>Created: ${r.created_at || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+        }
+
+        // Alerts
+        const alertEl = document.getElementById('alert-list');
+        if (alerts.length === 0) {
+          alertEl.innerHTML = `<div class="empty-state" style="padding: 30px;">
+                        <p style="margin:0;">No alert subscriptions yet.</p>
+                    </div>`;
+        } else {
+          alertEl.innerHTML = alerts.map(a => `
+                        <div class="scheme-card fade-in">
+                            <div class="scheme-info">
+                                <div class="scheme-name" style="font-size: 0.95rem;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                                    ${esc(a.scheme_name)}
+                                </div>
+                                <div class="scheme-meta">
+                                    <span>Channel: ${a.channel}</span>
+                                    ${a.next_deadline ? `<span>Next deadline: ${a.next_deadline}</span>` : ''}
+                                    <span><span class="pill ${a.is_active ? 'pill-green' : 'pill-amber'}"><span class="pill-dot"></span>${a.is_active ? 'Active' : 'Paused'}</span></span>
+                                </div>
+                            </div>
+                            <div class="scheme-actions">
+                                <button class="btn btn-outline btn-sm" onclick="toggleAlert('${a.id}', ${!a.is_active})">${a.is_active ? 'Pause' : 'Resume'}</button>
+                            </div>
+                        </div>
+                    `).join('');
+        }
+
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+        document.getElementById('auth-wall').style.display = 'block';
+      }
+    }
+
+    async function removeSaved(encoded) {
+      const name = decodeURIComponent(encoded);
+      await fetch(`${API}/api/v1/saved-schemes/${encodeURIComponent(name)}`, { method: 'DELETE', credentials: 'include' });
+      loadDashboard();
+    }
+
+    async function toggleAlert(alertId, nextState) {
+      await fetch(`${API}/api/v1/alerts/subscriptions/${alertId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: nextState })
+      });
+      loadDashboard();
+    }
+
+    function askAbout(schemeName) {
+      window.location.href = `/?chat=true&ask=${encodeURIComponent('Tell me more about ' + schemeName)}`;
+    }
+
+    function esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+    loadDashboard();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script>
+    let dashboardData = null;
+
+    // Override loadDashboard to store data for PDF export
+    const _originalLoadDashboard = loadDashboard;
+    loadDashboard = async function () {
+      await _originalLoadDashboard();
+      // Re-fetch to store data for PDF
+      try {
+        const res = await fetch(API + '/api/v1/saved-dashboard', { credentials: 'include' });
+        if (res.ok) {
+          dashboardData = await res.json();
+          if ((dashboardData.saved_schemes || []).length > 0) {
+            document.getElementById('export-pdf-btn').style.display = 'inline-flex';
+          }
+        }
+      } catch { }
+    };
+    loadDashboard();
+
+    function exportSavedSchemesPDF() {
+      if (!dashboardData) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const schemes = dashboardData.saved_schemes || [];
+
+      // Header
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('My Saved Government Schemes', 20, 25);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text(`Generated on ${new Date().toLocaleDateString('en-IN')} | ${schemes.length} scheme(s)`, 20, 33);
+
+      // Line
+      doc.setDrawColor(200);
+      doc.line(20, 37, 190, 37);
+
+      let y = 45;
+      doc.setTextColor(30);
+      schemes.forEach((s, i) => {
+        if (y > 270) { doc.addPage(); y = 25; }
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${i + 1}. ${s.scheme_name}`, 20, y);
+        y += 7;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80);
+        doc.text(`Status: ${s.status || 'saved'}${s.deadline ? '  |  Deadline: ' + s.deadline : ''}`, 24, y);
+        doc.setTextColor(30);
+        y += 10;
+      });
+
+      // Reminders
+      const reminders = dashboardData.reminders || [];
+      if (reminders.length > 0) {
+        if (y > 250) { doc.addPage(); y = 25; }
+        y += 5;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Reminders', 20, y);
+        y += 8;
+        reminders.forEach(r => {
+          if (y > 270) { doc.addPage(); y = 25; }
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`- ${r.reminder_text}`, 24, y);
+          y += 7;
+        });
+      }
+
+      doc.save('my-saved-schemes.pdf');
+    }
+  </script>
+</body>
+
+</html>

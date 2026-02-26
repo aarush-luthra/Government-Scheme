@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 import os
 
@@ -49,10 +49,11 @@ class Settings(BaseSettings):
     # MyScheme Website
     MYSCHEME_BASE_URL: str = "https://www.myscheme.gov.in"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "allow"  # Allow extra fields from .env
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="allow",
+    )
 
 
 # ✅ singleton

@@ -20,10 +20,15 @@ def get_reader():
     global _reader
     if _reader is None:
         import easyocr
+        import torch
         logger.info("Initializing EasyOCR reader (this may take a moment)...")
+        
+        # Determine GPU availability (CUDA for NVIDIA, MPS for Apple Silicon)
+        use_gpu = torch.cuda.is_available() or (hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
+        
         # Support English and Hindi
-        _reader = easyocr.Reader(['en', 'hi'], gpu=False)
-        logger.info("EasyOCR reader initialized successfully")
+        _reader = easyocr.Reader(['en', 'hi'], gpu=use_gpu)
+        logger.info(f"EasyOCR reader initialized successfully (GPU: {use_gpu})")
     return _reader
 
 

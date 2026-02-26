@@ -2,46 +2,46 @@
   {
     "query": "Show me schemes I am eligible for",
     "type": "Discovery Mode (Eligible Only)",
-    "reply_snippet": "I couldn't find schemes purely matching your profile....",
-    "full_reply": "I couldn't find schemes purely matching your profile.",
+    "reply_snippet": "Based on your profile, here are the schemes you may be eligible for:\n\n### 1. Manav Kalyan Yojana\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your income matches the limit co...",
+    "full_reply": "Based on your profile, here are the schemes you may be eligible for:\n\n### 1. Manav Kalyan Yojana\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your income matches the limit constraints.\n- **Benefits:** Support for various welfare activities.\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\n### 2. Adventure Training for Youth\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your age matches the scheme range.\n- **Benefits:** Free adventure training programs to develop skills.\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\n### 3. Banglar Awaas Yojana (BAY)\n- **Status:** Not Eligible \u274c\n- **Why this status was assigned:** No automated checks performed, but typically requires specific housing conditions.\n- **Benefits:** Financial assistance for housing.\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\nCurrently, you have two schemes where you may be eligible. If you need more information or assistance with a specific scheme, feel free to ask!\n\nSmart actions: Save scheme | Set reminder | Upload documents (OCR) | Track application status\nUpdates: Say 'notify me about new schemes' to enable alerts.",
     "status": "FAIL",
     "notes": "Expected 'Eligible \u2705' not found.",
-    "duration": "11.16s"
+    "duration": "8.02s"
   },
   {
     "query": "Tell me about schemes for farmers in general",
     "type": "General Inquiry (No Strict Filter)",
-    "reply_snippet": "I couldn't find schemes purely matching your profile....",
-    "full_reply": "I couldn't find schemes purely matching your profile.",
+    "reply_snippet": "Based on your request for schemes for farmers, here are the relevant options:\n\n### 1. Adventure Training for Youth\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your age match...",
+    "full_reply": "Based on your request for schemes for farmers, here are the relevant options:\n\n### 1. Adventure Training for Youth\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your age matches the scheme range.\n- **Benefits:** Free training in adventure activities to develop skills.\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\n### 2. Banglar Awaas Yojana (BAY)\n- **Status:** Not Eligible \u274c\n- **Why this status was assigned:** Typically requires specific housing conditions.\n- **Benefits:** Financial assistance for housing.\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\n### 3. AGR 3 (Farm Mechanization) Scheme For ST Farmers\n- **Status:** Not Eligible \u274c\n- **Why this status was assigned:** Scheme is specifically for ST farmers in Gujarat.\n- **Benefits:** Financial assistance for agricultural equipment.\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\nCurrently, the only scheme you may be eligible for is the Adventure Training for Youth. If you need more information or assistance with a specific scheme, feel free to ask!\n\nSmart actions: Save scheme | Set reminder | Upload documents (OCR) | Track application status\nUpdates: Say 'notify me about new schemes' to enable alerts.",
     "status": "FAIL",
-    "notes": "Expected 'PM Kisan' not found. Found forbidden 'I couldn't find schemes purely matching your profile'.",
-    "duration": "1.54s"
+    "notes": "Expected 'PM Kisan' not found.",
+    "duration": "8.29s"
   },
   {
     "query": "How to apply for PM Kisan?",
     "type": "Specific Scheme application",
-    "reply_snippet": "**Pradhan Mantri Kisan Samman Nidhi**\n- **Status**: Info Only (Guest)\n- **Reason**: No automated eligibility checks performed.\n- **Application Process**:\n  1. The following are the prerequisites for t...",
-    "full_reply": "**Pradhan Mantri Kisan Samman Nidhi**\n- **Status**: Info Only (Guest)\n- **Reason**: No automated eligibility checks performed.\n- **Application Process**:\n  1. The following are the prerequisites for the enrollment process: Aadhaar Card, Landholding paper, Savings bank account.\n  2. The VLE will fill in the complete details of farmer registration including State, district, subdistrict block, and village, key in the Aadhaar number, Name of the beneficiary, category, Bank detail, Land Registration ID, and Date of birth as printed on Aadhaar card for authentication.\n  3. The VLE will fill in the Land details like Survey/ Kahta No., Khasra no., and area of land as mentioned in land holding papers.\n  4. Upload the supporting documents like Land, Aadhar, and Bank passbook.\n  5. Self-declaration accept and save the application form.\n  6. After saving the application form, make payment through CSC ID.\n  7. Check the Beneficiary status through the Aadhaar number.\n- **Links**: Not Provided.",
+    "reply_snippet": "Here are the schemes for farmers that you may be eligible for:\n\n### 1. Kisan Parivahan Yojana\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your occupation in agriculture alig...",
+    "full_reply": "Here are the schemes for farmers that you may be eligible for:\n\n### 1. Kisan Parivahan Yojana\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your occupation in agriculture aligns with the scheme's focus.\n- **Benefits:** Support for transportation of agricultural produce.\n- **Required documents:** Not specified.\n- **Deadline:** Not specified.\n- **Official/apply link:** [I-Khedut Portal](https://ikhedut.gujarat.gov.in/)\n\n### 2. Mukhya Mantri Krishak Samriddhi Yojana\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your occupation in agriculture aligns with the scheme's focus.\n- **Benefits:** Financial incentives for selling specific crops.\n- **Required documents:** Not specified.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\n### 3. Adventure Training for Youth\n- **Status:** Possibly Eligible \u26a0\ufe0f\n- **Why this status was assigned:** Your age matches the scheme range.\n- **Benefits:** Free training in adventure activities.\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\nIf you need more information or assistance with a specific scheme, feel free to ask!\n\nSmart actions: Save scheme | Set reminder | Upload documents (OCR) | Track application status\nUpdates: Say 'notify me about new schemes' to enable alerts.",
     "status": "FAIL",
     "notes": "Expected 'Visit official website' not found.",
-    "duration": "5.80s"
+    "duration": "8.31s"
   },
   {
     "query": "Tell me about Banglar Awaas Yojana",
     "type": "State Mismatch Handling",
-    "reply_snippet": "I couldn't find schemes purely matching your profile....",
-    "full_reply": "I couldn't find schemes purely matching your profile.",
+    "reply_snippet": "### Banglar Awaas Yojana (BAY)\n- **Status:** Not Eligible \u274c\n- **Why this status was assigned:** No automated checks performed, but typically requires specific housing conditions that may not apply to ...",
+    "full_reply": "### Banglar Awaas Yojana (BAY)\n- **Status:** Not Eligible \u274c\n- **Why this status was assigned:** No automated checks performed, but typically requires specific housing conditions that may not apply to your profile.\n- **Benefits:** \n  - Financial assistance of \u20b9130,000/- per house, distributed in three installments.\n  - Wage support for unskilled labor (95 mandays) under MGNREGS.\n  - Assistance for constructing toilets under \"Mission Nirmal Bangla Prakalpa.\"\n- **Required documents:** Not clearly listed.\n- **Deadline:** Not specified.\n- **Official/apply link:** Not Provided.\n\nIf you have any other specific schemes in mind or need further assistance, feel free to ask!\n\nSmart actions: Save scheme | Set reminder | Upload documents (OCR) | Track application status\nUpdates: Say 'notify me about new schemes' to enable alerts.",
     "status": "FAIL",
     "notes": "Expected 'Note: Based on your profile' not found.",
-    "duration": "1.76s"
+    "duration": "5.12s"
   },
   {
     "query": "Am I eligible for Maternity Benefit?",
     "type": "Profile Mismatch (Gender)",
-    "reply_snippet": "**Maternity Benefit**\n- **Status**: Not Eligible \u26d4\n- **Reason**: The scheme is specifically for registered female members or wives of male members under the Building and Other Construction Workers Wel...",
-    "full_reply": "**Maternity Benefit**\n- **Status**: Not Eligible \u26d4\n- **Reason**: The scheme is specifically for registered female members or wives of male members under the Building and Other Construction Workers Welfare Board of West Bengal, and you do not meet this criterion.\n- **Details**: \n  - Financial assistance during maternity.\n  - Support for medical expenses.\n  - Additional benefits may include nutrition support and childcare assistance.\n- **Links**: Not Provided.",
-    "status": "PASS",
-    "notes": "",
-    "duration": "8.68s"
+    "reply_snippet": "### Maternity Benefit Schemes\nUnfortunately, you are not eligible for any of the maternity benefit schemes listed. Here\u2019s a summary:\n\n1. **Maternity Benefit (MBOCWWB)**\n   - **Status:** Not Eligible \u274c...",
+    "full_reply": "### Maternity Benefit Schemes\nUnfortunately, you are not eligible for any of the maternity benefit schemes listed. Here\u2019s a summary:\n\n1. **Maternity Benefit (MBOCWWB)**\n   - **Status:** Not Eligible \u274c\n   - **Why this status was assigned:** No automated checks performed; scheme typically targets specific demographics.\n   - **Benefits:** Not specified.\n   - **Required documents:** Not specified.\n   - **Deadline:** Not specified.\n   - **Official/apply link:** Not Provided.\n\n2. **Maternity Benefit**\n   - **Status:** Not Eligible \u274c\n   - **Why this status was assigned:** Scheme is for registered female construction workers in West Bengal.\n   - **Benefits:** Not specified.\n   - **Required documents:** Not specified.\n   - **Deadline:** Not specified.\n   - **Official/apply link:** Not Provided.\n\n3. **Maternity Benefit (CBOCWWB)**\n   - **Status:** Not Eligible \u274c\n   - **Why this status was assigned:** Scheme is for registered female workers in Punjab.\n   - **Benefits:** Not specified.\n   - **Required documents:** Not specified.\n   - **Deadline:** Not specified.\n   - **Official/apply link:** Not Provided.\n\nSince you are categorized as GENERAL and not a female construction worker, these schemes do not apply to you. If you would like to explore other schemes or refine your search by state or category, please let me know!\n\nSmart actions: Save scheme | Set reminder | Upload documents (OCR) | Track application status\nUpdates: Say 'notify me about new schemes' to enable alerts.",
+    "status": "FAIL",
+    "notes": "Expected 'Not Eligible \u26d4' not found.",
+    "duration": "7.82s"
   }
 ]

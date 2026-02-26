@@ -226,6 +226,7 @@
     </div>
 
     <script>
+        const API_BASE_URL = '';
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -233,7 +234,7 @@
             const errorDiv = document.getElementById('error-message');
 
             try {
-                const response = await fetch('/auth/login', {
+                const response = await fetch(API_BASE_URL + '/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',

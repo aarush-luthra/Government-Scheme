@@ -1,3 +1,107 @@
+const API_BASE_URL = '';
+
+// ============ Toast Notification System ============
+function showToast(message, type = 'error') {
+    const existing = document.querySelectorAll('.toast-notification');
+    existing.forEach((t, i) => { if (i >= 4) t.remove(); });
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = `<span class="toast-msg">${message}</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => { toast.classList.remove('toast-visible'); setTimeout(() => toast.remove(), 300); }, 4000);
+}
+
+// ============ DOMPurify Helper ============
+function sanitizeHTML(html) {
+    if (typeof DOMPurify !== 'undefined') {
+        return DOMPurify.sanitize(html, { ADD_ATTR: ['onclick', 'data-scheme', 'title'] });
+    }
+    return html; // fallback if CDN fails
+}
+
+// ============ JWT Refresh Helper ============
+async function refreshAccessToken() {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) return false;
+    try {
+        const res = await fetch(API_BASE_URL + '/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        if (!res.ok) { localStorage.removeItem('refresh_token'); return false; }
+        const data = await res.json();
+        if (data.success) { return true; }
+        return false;
+    } catch { return false; }
+}
+
+// ============ WebSocket Chat Client ============
+let chatWebSocket = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT = 5;
+
+function connectChatWebSocket() {
+    if (chatWebSocket && chatWebSocket.readyState === WebSocket.OPEN) return;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+    try {
+        chatWebSocket = new WebSocket(wsUrl);
+        chatWebSocket.onopen = () => { wsReconnectAttempts = 0; console.log('WebSocket connected'); };
+        chatWebSocket.onclose = () => {
+            chatWebSocket = null;
+            if (wsReconnectAttempts < WS_MAX_RECONNECT) {
+                wsReconnectAttempts++;
+                setTimeout(connectChatWebSocket, Math.min(1000 * wsReconnectAttempts, 5000));
+            }
+        };
+        chatWebSocket.onerror = () => { chatWebSocket = null; };
+    } catch { chatWebSocket = null; }
+}
+
+function sendViaWebSocket(message, history) {
+    return new Promise((resolve, reject) => {
+        if (!chatWebSocket || chatWebSocket.readyState !== WebSocket.OPEN) {
+            reject(new Error('WebSocket not connected'));
+            return;
+        }
+        const chatBox = document.getElementById("chat-box");
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "message bot";
+        msgDiv.innerHTML = '<div class="message-bubble"><span class="ws-stream"></span></div><div class="message-label">Assistant</div>';
+        chatBox.appendChild(msgDiv);
+        const streamEl = msgDiv.querySelector('.ws-stream');
+        let fullReply = '';
+
+        chatWebSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'chunk') {
+                fullReply += data.content;
+                streamEl.textContent = fullReply;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } else if (data.type === 'done') {
+                streamEl.innerHTML = sanitizeHTML(marked.parse(data.reply || fullReply));
+                chatBox.scrollTop = chatBox.scrollHeight;
+                resolve(data);
+            } else if (data.type === 'error') {
+                streamEl.textContent = 'An error occurred. Please try again.';
+                reject(new Error(data.message));
+            }
+        };
+        chatWebSocket.send(JSON.stringify({
+            message,
+            history,
+            source_lang: 'auto',
+            target_lang: currentLanguage,
+            user_id: currentUser ? currentUser.user_id : null
+        }));
+    });
+}
+
+// Try connecting WebSocket on page load
+setTimeout(connectChatWebSocket, 1000);
+
 // ============ State Management ============
 let currentUser = null;
 let sessionId = null;
@@ -71,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkAuthStatus() {
     try {
-        const response = await fetch('/auth/me', {
+        const response = await fetch(API_BASE_URL + '/auth/me', {
             credentials: 'include'
         });
         const data = await response.json();
@@ -383,7 +487,7 @@ async function translatePage(targetLang) {
             // De-duplicate requests to save bandwidth
             const uniqueTexts = [...new Set(needsApiTranslation)];
 
-            const response = await fetch('http://127.0.0.1:8000/translate/batch', {
+            const response = await fetch(API_BASE_URL + '/translate/batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -685,7 +789,7 @@ async function openSchemeFinderModal(mode = 'signup') {
 
         // Fetch Data
         try {
-            const response = await fetch('http://127.0.0.1:8000/edit');
+            const response = await fetch(API_BASE_URL + '/edit');
             const profile = await response.json();
             if (profile && Object.keys(profile).length > 0) {
                 populateSchemeForm(profile);
@@ -913,7 +1017,7 @@ async function submitEditProfile() {
     if (loading) loading.classList.remove('hidden');
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/edit', {
+        const response = await fetch(API_BASE_URL + '/edit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -932,11 +1036,11 @@ async function submitEditProfile() {
             // Silently close modal - no alert popup
             closeSchemeFinderModal();
         } else {
-            alert(data.message || 'Failed to update profile');
+            showToast(data.message || 'Failed to update profile', 'error');
         }
     } catch (error) {
         console.error('Profile update error:', error);
-        alert('An error occurred. Please try again.');
+        showToast('Profile update failed. Please try again.', 'error');
     } finally {
         if (loading) loading.classList.add('hidden');
     }
@@ -1080,7 +1184,7 @@ async function submitSchemeForm() {
     loading.classList.remove('hidden');
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/profile', {
+        const response = await fetch(API_BASE_URL + '/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1273,7 +1377,7 @@ async function submitSignIn() {
     showLoading(true);
 
     try {
-        const response = await fetch('/auth/login', {
+        const response = await fetch(API_BASE_URL + '/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1284,6 +1388,9 @@ async function submitSignIn() {
 
         if (data.success) {
             currentUser = data.user;
+            if (data.refresh_token) {
+                localStorage.setItem('refresh_token', data.refresh_token);
+            }
             updateUIForLoggedInUser();
             closeAuthModal();
 
@@ -1297,7 +1404,7 @@ async function submitSignIn() {
         }
     } catch (error) {
         console.error('Login error:', error);
-        showError('signin-password', 'An error occurred. Please try again.');
+        showToast('Login failed. Please check your connection and try again.', 'error');
     } finally {
         showLoading(false);
     }
@@ -1305,12 +1412,13 @@ async function submitSignIn() {
 
 async function handleLogout() {
     try {
-        await fetch('/auth/logout', {
+        await fetch(API_BASE_URL + '/auth/logout', {
             method: 'POST',
             credentials: 'include'
         });
 
         currentUser = null;
+        localStorage.removeItem('refresh_token');
         updateUIForAnonymousUser();
 
         // Redirect to landing page
@@ -1348,7 +1456,7 @@ async function sendMessage() {
     input.value = "";
 
     try {
-        const response = await fetch("/chat", {
+        const response = await fetch(API_BASE_URL + '/chat', {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -1366,6 +1474,13 @@ async function sendMessage() {
         const data = await response.json();
 
         if (data.auth_required) {
+            // Try token refresh before forcing re-login
+            const refreshed = await refreshAccessToken();
+            if (refreshed) {
+                // Retry the request
+                sendQuickAction(message);
+                return;
+            }
             disableChat();
             openAuthModal('signin', true);
             return;
@@ -1382,11 +1497,12 @@ async function sendMessage() {
 
     } catch (error) {
         console.error("Chat Error:", error);
-        let errorMsg = "❌ An error occurred. Please try again.";
         if (error.message.includes("Failed to fetch")) {
-            errorMsg = "❌ Unable to connect to server. Please ensure the backend is running.";
+            showToast("Unable to connect to server. Please ensure the backend is running.", "error");
+        } else {
+            showToast("An error occurred. Please try again.", "error");
         }
-        addMessage("Assistant", errorMsg, "bot");
+        addMessage("Assistant", "Something went wrong. Please try again.", "bot");
     }
 }
 
@@ -1397,7 +1513,21 @@ function addMessage(sender, text, className, sources = null) {
     const msgDiv = document.createElement("div");
     msgDiv.className = `message ${className}`;
 
-    let contentHtml = className === "bot" ? marked.parse(text || "") : text;
+    let contentHtml = className === "bot" ? sanitizeHTML(marked.parse(text || "")) : text;
+
+    // For bot messages: inject inline bookmark buttons next to scheme titles
+    if (className === "bot" && currentUser) {
+        const schemeNames = extractSchemeNamesFromResponse(text);
+        if (schemeNames.length > 0) {
+            schemeNames.forEach(name => {
+                const escapedName = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const bookmarkBtn = `<button class="inline-bookmark-btn" title="Save ${name}" onclick="event.stopPropagation(); toggleSaveScheme(this, '${escapedName}')" data-scheme="${escapedName}"><svg class="bm-outline" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><svg class="bm-filled" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" stroke="currentColor" stroke-width="2" style="display:none"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`;
+                // Inject after the <strong> tag containing this scheme name
+                const strongRegex = new RegExp(`(<strong>)(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(</strong>)`, 'g');
+                contentHtml = contentHtml.replace(strongRegex, `$1$2$3${bookmarkBtn}`);
+            });
+        }
+    }
 
     msgDiv.innerHTML = `
         <div class="message-bubble">
@@ -1463,6 +1593,38 @@ function addMessage(sender, text, className, sources = null) {
     }
 
     chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// ============ Save Scheme Helpers ============
+async function toggleSaveScheme(btn, schemeName) {
+    if (!currentUser) { openAuthModal('signin', true); return; }
+    const isSaved = btn.classList.contains('saved');
+    btn.disabled = true;
+    try {
+        if (isSaved) {
+            await fetch(API_BASE_URL + '/api/v1/saved-schemes/' + encodeURIComponent(schemeName), {
+                method: 'DELETE', credentials: 'include'
+            });
+            btn.classList.remove('saved');
+            btn.querySelector('.bm-outline').style.display = '';
+            btn.querySelector('.bm-filled').style.display = 'none';
+        } else {
+            await fetch(API_BASE_URL + '/api/v1/saved-schemes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ scheme_name: schemeName })
+            });
+            btn.classList.add('saved');
+            btn.querySelector('.bm-outline').style.display = 'none';
+            btn.querySelector('.bm-filled').style.display = '';
+        }
+    } catch (err) {
+        console.error('Save scheme error:', err);
+        showToast('Failed to save scheme. Please try again.', 'error');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 // Extract scheme names from bot response text
@@ -1616,7 +1778,7 @@ async function processVerificationDocument() {
         const formData = new FormData();
         formData.append('file', verificationFile);
 
-        const response = await fetch('/api/v1/ocr', {
+        const response = await fetch(API_BASE_URL + '/api/v1/ocr', {
             method: 'POST',
             body: formData
         });
@@ -1729,7 +1891,7 @@ submitSchemeForm = async function () {
     loading.classList.remove('hidden');
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/profile', {
+        const response = await fetch(API_BASE_URL + '/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

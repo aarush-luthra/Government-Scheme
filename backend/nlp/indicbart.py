@@ -76,12 +76,18 @@ class IndicBartTranslator:
             self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
             self.model.eval()
             
-            # Hardware-aware Optimization
+            # Hardware-aware Optimization (Supports CUDA, MPS, and CPU)
             if torch.cuda.is_available():
                 self.device = "cuda"
                 self.model.to(self.device)
-                self.model.half() # Float16 Precision for GPU
-                print(f"Model loaded on: GPU (Float16 Mode)")
+                self.model.half()  # Float16 Precision for NVIDIA GPU
+                print(f"Model loaded on: NVIDIA GPU (CUDA - Float16 Mode)")
+            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                self.device = "mps"
+                self.model.to(self.device)
+                # Keep float32 for MPS as float16 can have stability issues on some models,
+                # but if memory is an issue, self.model.half() could be used.
+                print(f"Model loaded on: Apple Silicon GPU (MPS)")
             else:
                 self.device = "cpu"
                 # Set quantization engine for CPU
