@@ -1120,6 +1120,14 @@ function selectCard(element, type) {
         schemeFormData.gender = element.dataset.value;
     } else if (type === 'employment') {
         schemeFormData.employment_status = element.dataset.value;
+        // Auto-select student status if "Student" or "College Student" is picked
+        if (element.dataset.value === 'student' || element.dataset.value === 'college_student') {
+            const studentSelection = document.getElementById('student-selection');
+            if (studentSelection) {
+                const yesBtn = studentSelection.querySelector('[data-value="yes"]');
+                if (yesBtn) selectToggle(yesBtn, 'student');
+            }
+        }
     }
 }
 
@@ -1195,11 +1203,7 @@ function handleOverlayClick(event) {
     }
 }
 
-function switchToSchemeFinderFromAuth(event) {
-    event.preventDefault();
-    closeAuthModal();
-    openSchemeFinderModal();
-}
+
 
 function switchToSignInFromScheme(event) {
     event.preventDefault();

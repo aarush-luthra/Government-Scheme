@@ -4,6 +4,8 @@
 
 # Virtual environment
 venv/
+venv_py11/
+backend/user_data/
 env/
 ENV/
 

@@ -1,5 +1,6 @@
 """
 Scheme Matcher Agent - Profile-based scheme eligibility matching.
+Prioritized Hard Filters: State > Dis/Min > Caste (Social Cat) > Income > Age > Student
 """
 from typing import Dict, List, Optional, Tuple
 
@@ -12,82 +13,86 @@ class SchemeMatcher:
     @staticmethod
     def extract_search_queries(user_profile: Dict) -> List[str]:
         """
-        Generate multiple search queries based on user profile characteristics.
-        Returns a list of queries to maximize recall.
+        Generate multiple search queries based on user profile DB columns.
         """
         queries = []
+        queries.append("eligibility criteria benefits")
         
-        # Base eligibility query
-        queries.append("eligibility criteria requirements")
-        
-        # Category-specific queries
+        # 1. SOCIAL CATEGORY (Caste)
         category = (user_profile.get("category") or "").lower()
-        if category == "sc":
-            queries.append("scheduled caste SC eligibility schemes")
-        elif category == "st":
-            queries.append("scheduled tribe ST eligibility schemes")
-        elif category == "obc":
-            queries.append("other backward class OBC eligibility schemes")
-        elif category == "ews":
-            queries.append("economically weaker section EWS eligibility")
+        if category in ["sc", "scheduled caste"]:
+            queries.append("scheduled caste SC schemes")
+        elif category in ["st", "scheduled tribe"]:
+            queries.append("scheduled tribe ST schemes")
+        elif category in ["obc", "other backward class"]:
+            queries.append("OBC other backward class schemes")
+        elif category in ["ews", "economically weaker section"]:
+            queries.append("EWS economically weaker section schemes")
         
-        # Gender-specific queries
+        # 2. GENDER
         gender = (user_profile.get("gender") or "").lower()
         if gender == "female":
-            queries.append("women girl female eligibility schemes benefits")
+            queries.append("women girl female maternity schemes")
+        elif gender == "transgender":
+            queries.append("transgender schemes")
         
-        # Age-specific queries
+        # 3. AGE
         age = user_profile.get("age")
         if age:
             if age < 18:
-                queries.append("child minor youth schemes")
-            elif age < 30:
+                queries.append("child student minor schemes")
+            elif age < 35:
                 queries.append("youth young adult schemes")
-            elif age < 60:
-                queries.append("adult working age schemes")
-            else:
-                queries.append("senior citizen elderly pension schemes")
-        
-        # Student queries
-        if user_profile.get("is_student"):
-            queries.append("student scholarship education study eligibility")
-        
-        # Disability queries
+            elif age > 60:
+                queries.append("senior citizen pension elderly schemes")
+
+        # 4. AREA (Rural/Urban)
+        area = (user_profile.get("area") or "").lower()
+        if area == "rural":
+            queries.append("rural gram panchayat agriculture village schemes")
+        elif area == "urban":
+            queries.append("urban housing municipal city schemes")
+
+        # 5. DISABILITY
         if user_profile.get("is_disabled"):
-            queries.append("disability disabled divyang PwD handicapped eligibility")
-        
-        # Minority queries
+            queries.append("disability disabled divyang PwD handicapped pension aids")
+
+        # 6. MINORITY
         if user_profile.get("is_minority"):
-            queries.append("minority community eligibility schemes")
-        
-        # Employment/Occupation queries
-        employment = user_profile.get("employment_status") or user_profile.get("occupation")
-        if employment:
-            emp_lower = str(employment).lower()
-            if "farmer" in emp_lower or "agriculture" in emp_lower:
-                queries.append("farmer agriculture agricultural eligibility schemes")
-            elif "business" in emp_lower or "entrepreneur" in emp_lower:
-                queries.append("business entrepreneur startup self employed schemes")
-            elif "unemployed" in emp_lower:
-                queries.append("unemployed job employment skill training schemes")
-            elif "student" in emp_lower:
-                queries.append("student scholarship education eligibility")
-        
-        # Income-based queries
-        annual_income = user_profile.get("annual_income") or user_profile.get("income")
-        if annual_income:
-            if annual_income < 100000:
-                queries.append("low income below poverty BPL eligibility")
-            elif annual_income < 300000:
-                queries.append("income limit 2 lakh 3 lakh eligibility")
-            elif annual_income < 600000:
-                queries.append("income limit 6 lakh eligibility middle")
-        
-        # State-specific queries
+            queries.append("minority community muslim christian sikh jain schemes")
+
+        # 7. STUDENT STATUS
+        if user_profile.get("is_student"):
+            queries.append("student scholarship education fellowship")
+
+        # 8. EMPLOYMENT STATUS
+        emp_status = (user_profile.get("employment_status") or "").lower()
+        if "farmer" in emp_status or "agriculture" in emp_status:
+            queries.append("farmer kisan agriculture subsidy")
+        elif "unemployed" in emp_status:
+            queries.append("unemployed youth skill development employment")
+        elif "self_employed" in emp_status or "business" in emp_status:
+            queries.append("entrepreneur startup msme loan business")
+        elif "artisan" in emp_status:
+            queries.append("artisan handicraft vishwakarma")
+
+        # 9. GOVERNMENT EMPLOYEE
+        if user_profile.get("is_govt_employee"):
+            queries.append("government employee housing welfare")
+
+        # 10. INCOME
+        inc_val = user_profile.get("annual_income") or user_profile.get("family_income")
+        if inc_val:
+            if inc_val < 200000:
+                queries.append("BPL below poverty line low income housing ration")
+            elif inc_val < 800000:
+                queries.append("EWS middle income group schemes")
+
+        # 11. STATE
         state = user_profile.get("state")
         if state:
             state_clean = str(state).replace("_", " ")
-            queries.append(f"{state_clean} state scheme eligibility")
+            queries.append(f"{state_clean} state government schemes")
         
         return queries
     
@@ -96,103 +101,241 @@ class SchemeMatcher:
         """
         Check if user profile matches scheme eligibility criteria.
         
-        Returns:
-            - is_eligible: Boolean indicating likely eligibility
-            - confidence: Float score 0-1 indicating confidence
-            - reasons: List of matching/non-matching criteria
+        HARD FILTERS (Strict - sets is_eligible=False):
+        1. State
+        2. Disability OR Minority
+        3. Social Category (Caste) OR Area
+        4. Income
+        5. Age
+        6. Student Status
+        
+        SOFT FILTERS (Lenient - reduces confidence):
+        1. Gender
+        2. Employment Status
+        3. Scheme Topic Relevance (New)
+        4. Govt Employee Exclusion
         """
         matches = []
         mismatches = []
-        confidence = 0.5  # Start neutral
+        confidence = 0.3  # Lower base confidence
+        is_eligible = True 
         
-        # Check age
+        # Helper: Get Scheme Tags for Keyword Matching
+        scheme_name = str(scheme_metadata.get("scheme_name", "") or scheme_metadata.get("title", ""))
+        scheme_tags = (str(scheme_metadata.get("tags", [])) + " " + 
+                       scheme_name + " " + 
+                       str(scheme_metadata.get("beneficiary_type", ""))).lower()
+
+        # ==========================================
+        # 🔴 SECTION 1: HARD FILTERS
+        # ==========================================
+
+        # 1. STATE CHECK (Aggressive)
+        user_state = (user_profile.get("state") or "").lower().replace("_", " ")
+        scheme_level = (scheme_metadata.get("level") or "").lower()
+        scheme_gov = (scheme_metadata.get("government") or "").lower()
+        
+        indian_states = [
+            "andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh", "goa", "gujarat", "haryana", 
+            "himachal pradesh", "jharkhand", "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur", 
+            "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan", "sikkim", "tamil nadu", 
+            "telangana", "tripura", "uttar pradesh", "uttarakhand", "west bengal", "delhi", "chandigarh", "puducherry"
+        ]
+
+        if user_state:
+            # A. Explicit State Mismatch (Metadata based)
+            if scheme_level == "state" and scheme_gov:
+                if user_state not in scheme_gov and scheme_gov not in user_state:
+                    is_eligible = False
+                    reason = f"⛔ State Mismatch: Scheme for {scheme_gov.title()}, you are in {user_state.title()}"
+                    print(f"[MATCHER] REJECTED {scheme_name} ({reason})")
+                    return False, 0.0, [reason]
+
+            # B. Name-based State Exclusion (Aggressive)
+            # If name mentions another state (e.g. "Bihar", "Banglar"), reject it.
+            for state in indian_states:
+                if state != user_state and state in scheme_name.lower():
+                    # Handle "Banglar" as West Bengal
+                    if state == "west bengal" or "banglar" in scheme_name.lower():
+                        if user_state != "west bengal":
+                            is_eligible = False
+                            reason = f"⛔ State Conflict: Scheme mentions another state"
+                            print(f"[MATCHER] REJECTED {scheme_name} (Mentions other state: {state})")
+                            return False, 0.0, [reason]
+                    elif state in scheme_name.lower():
+                        is_eligible = False
+                        reason = f"⛔ State Conflict: Scheme mentions another state"
+                        print(f"[MATCHER] REJECTED {scheme_name} (Mentions other state: {state})")
+                        return False, 0.0, [reason]
+            
+            # C. Boost for Matching State
+            if user_state in scheme_name.lower() or (scheme_gov and user_state in scheme_gov):
+                matches.append(f"Eligibility: Matches your state ({user_state.title()})")
+                confidence += 0.4
+
+        # 2A. DISABILITY CHECK (High Priority)
+        user_disabled = user_profile.get("is_disabled", False)
+        is_disability_scheme = any(x in scheme_tags for x in ["disability", "disabled", "divyang", "handicap", "pwd"])
+        
+        if is_disability_scheme and not user_disabled:
+            mismatches.append("⛔ Requirement: Scheme is exclusively for Persons with Disabilities")
+            confidence = 0.0
+            is_eligible = False
+        elif is_disability_scheme and user_disabled:
+            matches.append("Eligibility: Matches Disability status")
+            confidence += 0.3
+
+        # 2B. MINORITY CHECK (High Priority)
+        user_minority = user_profile.get("is_minority", False)
+        is_minority_scheme = "minority" in scheme_tags or "minority" in (scheme_metadata.get("category") or "").lower()
+        
+        if is_minority_scheme and not user_minority:
+            mismatches.append("⛔ Requirement: Scheme is exclusively for Minority communities")
+            confidence = 0.0
+            is_eligible = False
+        elif is_minority_scheme and user_minority:
+            matches.append("Eligibility: Matches Minority status")
+            confidence += 0.3
+
+        # 3A. SOCIAL CATEGORY (CASTE) CHECK
+        user_caste = (user_profile.get("category") or "").lower()
+        scheme_eligible_castes = (scheme_metadata.get("beneficiary_category") or "").lower()
+        
+        if not scheme_eligible_castes:
+            if "sc" in scheme_tags or "scheduled caste" in scheme_tags: scheme_eligible_castes += "sc"
+            if "st" in scheme_tags or "scheduled tribe" in scheme_tags: scheme_eligible_castes += "st"
+            if "obc" in scheme_tags: scheme_eligible_castes += "obc"
+            if not scheme_eligible_castes: scheme_eligible_castes = "all"
+
+        if scheme_eligible_castes not in ["all", "general", "any"] and user_caste:
+            if user_caste not in scheme_eligible_castes:
+                mismatches.append(f"⛔ Category Mismatch: Scheme for {scheme_eligible_castes.upper()}, you are {user_caste.upper()}")
+                confidence = 0.0
+                is_eligible = False
+            else:
+                matches.append(f"Eligibility: Matches your category ({user_caste.upper()})")
+                confidence += 0.2
+
+        # 3B. AREA (Rural/Urban) CHECK
+        user_area = (user_profile.get("area") or "").lower()
+        scheme_residence = (scheme_metadata.get("residence_type") or "all").lower()
+        
+        if scheme_residence not in ["all", "any", "both"] and user_area:
+            if user_area != scheme_residence:
+                mismatches.append(f"⛔ Area Mismatch: Scheme for {scheme_residence.title()}, you are {user_area.title()}")
+                confidence = 0.0
+                is_eligible = False
+
+        # 4. INCOME CHECK
+        user_income = user_profile.get("annual_income") or user_profile.get("family_income")
+        scheme_income_max = scheme_metadata.get("income_max")
+        
+        if user_income and scheme_income_max:
+            if user_income > scheme_income_max:
+                mismatches.append(f"⛔ Income: Rs.{user_income:,} exceeds limit Rs.{scheme_income_max:,}")
+                confidence = 0.0
+                is_eligible = False
+            else:
+                matches.append(f"Income: Matches limit constraints")
+                confidence += 0.1
+
+        # 5. AGE CHECK
         user_age = user_profile.get("age")
         if user_age:
             age_min = scheme_metadata.get("age_min")
             age_max = scheme_metadata.get("age_max")
             
-            if age_min and age_max:
-                if age_min <= user_age <= age_max:
-                    matches.append(f"Age {user_age} within {age_min}-{age_max} range")
-                    confidence += 0.15
+            if age_min is not None or age_max is not None:
+                lower = age_min if age_min is not None else 0
+                upper = age_max if age_max is not None else 100
+                
+                if not (lower <= user_age <= upper):
+                    mismatches.append(f"⛔ Age: {user_age} is outside range {lower}-{upper}")
+                    confidence = 0.0
+                    is_eligible = False
                 else:
-                    mismatches.append(f"Age {user_age} outside {age_min}-{age_max} range")
-                    confidence -= 0.2
+                    matches.append(f"Age: {user_age} matches scheme range")
+                    confidence += 0.1
+
+        # 6. STUDENT CHECK (Hard Filter)
+        user_student = user_profile.get("is_student", False)
+        is_student_scheme = any(x in scheme_tags for x in ["scholarship", "student", "tuition", "fellowship"])
         
-        # Check income
-        user_income = user_profile.get("annual_income") or user_profile.get("income")
-        if user_income:
-            income_max = scheme_metadata.get("income_max")
-            if income_max:
-                if user_income <= income_max:
-                    matches.append(f"Income Rs.{user_income:,} within limit Rs.{income_max:,}")
-                    confidence += 0.15
-                else:
-                    mismatches.append(f"Income Rs.{user_income:,} exceeds limit Rs.{income_max:,}")
-                    confidence -= 0.25
+        if is_student_scheme and not user_student:
+             mismatches.append("⛔ Requirement: Scheme is exclusively for Students")
+             confidence = 0.0
+             is_eligible = False
+        elif is_student_scheme and user_student:
+             matches.append("Eligibility: Matches Student status")
+             confidence += 0.15
+
+        # STOP IF HARD FILTERS FAILED
+        if not is_eligible:
+            return False, 0.0, mismatches
+
+        # ==========================================
+        # 🟡 SECTION 2: SOFT FILTERS (Penalties)
+        # ==========================================
+
+        # 7. SCHEME TOPIC RELEVANCE (Fixed Logic)
+        # Check if Scheme Topic (Agriculture, Edu) matches User Profile
+        scheme_topic = (scheme_metadata.get("category") or "").lower() # This is the Domain (e.g. Agriculture)
+        user_emp = (user_profile.get("employment_status") or "").lower()
         
-        # Check gender
-        user_gender = (user_profile.get("gender") or "").lower()
-        scheme_gender = scheme_metadata.get("gender")
-        if scheme_gender:
-            if user_gender == scheme_gender:
-                matches.append(f"Gender requirement ({scheme_gender}) matches")
-                confidence += 0.1
-            else:
-                mismatches.append(f"Gender requirement is {scheme_gender}, user is {user_gender}")
-                confidence -= 0.3
-        
-        # Check disability
-        user_disabled = user_profile.get("is_disabled")
-        scheme_disabled = scheme_metadata.get("is_disabled")
-        if scheme_disabled and not user_disabled:
-            mismatches.append("Scheme requires disability status")
-            confidence -= 0.3
-        elif scheme_disabled and user_disabled:
-            matches.append("Disability requirement matches")
+        # Example 1: Farmer -> Agriculture
+        if "agriculture" in scheme_topic and "farmer" in user_emp:
+            matches.append(f"Relevance: Scheme Topic '{scheme_topic.title()}' matches your Occupation")
             confidence += 0.15
         
-        # Check student status
-        user_student = user_profile.get("is_student")
-        scheme_student = scheme_metadata.get("is_student")
-        if scheme_student and not user_student:
-            mismatches.append("Scheme requires student status")
-            confidence -= 0.2
-        elif scheme_student and user_student:
-            matches.append("Student requirement matches")
-            confidence += 0.1
+        # Example 2: Student -> Education
+        elif "education" in scheme_topic and user_profile.get("is_student"):
+            matches.append(f"Relevance: Scheme Topic '{scheme_topic.title()}' matches Student status")
+            confidence += 0.15
+            
+        # Example 3: Health -> Everyone (No Boost, but no penalty)
+
+        # 8. GENDER CHECK (Soft)
+        user_gender = (user_profile.get("gender") or "").lower()
+        scheme_gender = (scheme_metadata.get("gender") or "all").lower()
         
-        # Heuristic: Check title for student keywords if metadata is missing
-        title = scheme_metadata.get("title", "").lower()
-        student_keywords = ["student", "scholarship", "college", "university", "matric", "school"]
-        if not user_student and any(k in title for k in student_keywords):
-            mismatches.append("Scheme appears to be for students/education")
-            confidence -= 0.4
+        if scheme_gender not in ["all", "any", "both"] and user_gender:
+            if user_gender != scheme_gender:
+                mismatches.append(f"⚠️ Gender Warning: Scheme prefers {scheme_gender.title()}")
+                confidence -= 0.3
+
+        # 9. EMPLOYMENT STATUS CHECK (Soft)
+        if "farmer" in scheme_tags and "farmer" not in user_emp and "agriculture" not in user_emp:
+             mismatches.append("⚠️ Employment Warning: Scheme appears to be for Farmers")
+             confidence -= 0.2
+
+        # 10. GOVT EMPLOYEE EXCLUSION (Soft)
+        user_govt = user_profile.get("is_govt_employee", False)
+        exclusions = (scheme_metadata.get("exclusions") or "").lower()
         
-        # Clamp confidence
+        if user_govt:
+            if "government employee" in exclusions or "govt employee" in exclusions:
+                mismatches.append("⚠️ Exclusion Warning: Govt employees might be excluded")
+                confidence -= 0.4
+
+        # --- Final Scoring ---
         confidence = max(0.0, min(1.0, confidence))
         
-        # Determine eligibility
-        is_eligible = len(mismatches) == 0 or (len(matches) > len(mismatches) and confidence > 0.4)
-        
-        reasons = matches + [f"⚠️ {m}" for m in mismatches]
+        reasons = [f"✅ {m}" for m in matches] + [f"🚩 {m}" for m in mismatches]
         
         return is_eligible, confidence, reasons
-    
+
     @staticmethod
     def rank_schemes(user_profile: Dict, documents: List) -> List[Tuple]:
         """
         Rank retrieved documents by eligibility match.
-        
-        Returns list of (document, confidence, reasons) tuples sorted by confidence.
+        Returns list of (document, confidence, reasons) sorted by confidence.
         """
         ranked = []
         seen_titles = set()
         
         for doc in documents:
-            title = doc.metadata.get("title", "Unknown")
+            title = doc.metadata.get("scheme_name") or doc.metadata.get("title", "Unknown")
             
-            # Skip duplicates
             if title in seen_titles:
                 continue
             seen_titles.add(title)
@@ -201,7 +344,8 @@ class SchemeMatcher:
                 user_profile, doc.metadata
             )
             
-            if is_eligible or confidence > 0.3:
+            # Keep if eligible (Hard Filters passed)
+            if is_eligible and confidence > 0.0:
                 ranked.append((doc, confidence, reasons))
         
         # Sort by confidence descending
