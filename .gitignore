@@ -59,6 +59,7 @@ server.log
 # Testing
 .pytest_cache/
 .coverage
+.coverage*
 htmlcov/
 .tox/
 
@@ -80,6 +81,11 @@ geckodriver
 *.swp
 temp/
 tmp/
+response_context*.json
+signed_in_test_results.json
+
+# Generated frontend coverage files
+frontend/coverage/
 
 # Frontend build/test artifacts
 frontend/node_modules/

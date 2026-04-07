@@ -17,7 +17,9 @@ import multiprocessing
 import random
 
 # --- Configuration ---
-API_KEY = "tYTy5eEhlu9rFjyxuCr7ra7ACp4dv1RH8gWuHTDc"
+API_KEY = os.getenv("MYSCHEME_API_KEY", "")
+if not API_KEY:
+    raise RuntimeError("MYSCHEME_API_KEY is not set. Add it to your environment or .env file.")
 SEARCH_URL = "https://api.myscheme.gov.in/search/v6/schemes"
 SCHEME_DETAIL_URL = "https://api.myscheme.gov.in/schemes/v6/public/schemes"
 
